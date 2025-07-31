@@ -10,6 +10,8 @@
 	<array>
 		<string></string>
 	</array>
+	<key>CFBundleIconName</key>
+	<string></string>
 	<key>CFBundleIcons</key>
 	<dict>
 		<key>CFBundlePrimaryIcon</key>
@@ -37,5 +39,14 @@
 	</dict>
 	<key>CFBundleSignature</key>
 	<string></string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>map</string>
+		<string>comgooglemaps</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string></string>
+	</array>
 </dict>
 </plist>

@@ -3,7 +3,7 @@
 import Foundation
 import CoreLocation
 
-struct LocationData: Identifiable, Codable {
+struct LocationData: Identifiable, Codable, Hashable, Equatable {
     let id: UUID // Changed to let but will be set in initializers
     let address: String
     let coordinate: CLLocationCoordinate2D
@@ -62,5 +62,27 @@ struct LocationData: Identifiable, Codable {
         try container.encode(photoIdentifiers, forKey: .photoIdentifiers) // NEW: Encode photo IDs
         try container.encode(coordinate.latitude, forKey: .latitude)
         try container.encode(coordinate.longitude, forKey: .longitude)
+    }
+    
+    // MARK: - Hashable Conformance
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    // MARK: - Equatable Conformance
+    static func == (lhs: LocationData, rhs: LocationData) -> Bool {
+        return lhs.id == rhs.id
+    }
+}
+
+// MARK: - CLLocationCoordinate2D Extensions for Hashable Support
+extension CLLocationCoordinate2D: Hashable, Equatable {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(latitude)
+        hasher.combine(longitude)
+    }
+    
+    public static func == (lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool {
+        return lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude
     }
 }

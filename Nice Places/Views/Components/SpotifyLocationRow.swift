@@ -7,107 +7,108 @@ struct SpotifyLocationRow: View {
     let location: LocationData
     let onDelete: () -> Void
     let onTap: () -> Void
+    let onMapTap: () -> Void // NEW: Map tap handler
     let photoManager: PhotoManager
     
     @State private var firstThumbnail: UIImage?
     @State private var isLoadingThumbnail = false
     
     var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 16) {
-                // Location Icon with Photo Overlay
-                VStack {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.spotifyGreen, Color.spotifyGreen.opacity(0.7)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+        HStack(spacing: 16) {
+            // Location Icon with Photo Overlay
+            VStack {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.spotifyGreen, Color.spotifyGreen.opacity(0.7)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
+                        )
+                        .frame(width: 56, height: 56)
+                    
+                    // Show first photo as thumbnail or location icon
+                    if let thumbnail = firstThumbnail {
+                        Image(uiImage: thumbnail)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
                             .frame(width: 56, height: 56)
-                        
-                        // Show first photo as thumbnail or location icon
-                        if let thumbnail = firstThumbnail {
-                            Image(uiImage: thumbnail)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 56, height: 56)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                .overlay(
-                                    // Photo count badge
-                                    VStack {
-                                        HStack {
-                                            Spacer()
-                                            if location.photoIdentifiers.count > 1 {
-                                                Text("\(location.photoIdentifiers.count)")
-                                                    .font(.caption2)
-                                                    .fontWeight(.bold)
-                                                    .foregroundColor(.black)
-                                                    .padding(.horizontal, 6)
-                                                    .padding(.vertical, 2)
-                                                    .background(
-                                                        Capsule()
-                                                            .fill(Color.spotifyGreen)
-                                                    )
-                                            }
-                                        }
-                                        Spacer()
-                                    }
-                                    .padding(4)
-                                )
-                        } else if isLoadingThumbnail {
-                            // Show loading indicator
-                            ZStack {
-                                Image(systemName: "location.fill")
-                                    .font(.title2)
-                                    .foregroundColor(.black)
-                                    .opacity(0.3)
-                                
-                                ProgressView()
-                                    .scaleEffect(0.7)
-                                    .tint(.black)
-                            }
-                        } else {
-                            // Show location icon with photo indicator
-                            Image(systemName: "location.fill")
-                                .font(.title2)
-                                .foregroundColor(.black)
-                            
-                            // Photo indicator overlay
-                            if !location.photoIdentifiers.isEmpty {
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .overlay(
+                                // Photo count badge
                                 VStack {
                                     HStack {
                                         Spacer()
-                                        ZStack {
-                                            Circle()
-                                                .fill(Color.white)
-                                                .frame(width: 18, height: 18)
-                                            
-                                            if location.photoIdentifiers.count == 1 {
-                                                Image(systemName: "camera.fill")
-                                                    .font(.caption2)
-                                                    .foregroundColor(.spotifyGreen)
-                                            } else {
-                                                Text("\(location.photoIdentifiers.count)")
-                                                    .font(.caption2)
-                                                    .fontWeight(.bold)
-                                                    .foregroundColor(.spotifyGreen)
-                                            }
+                                        if location.photoIdentifiers.count > 1 {
+                                            Text("\(location.photoIdentifiers.count)")
+                                                .font(.caption2)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.black)
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 2)
+                                                .background(
+                                                    Capsule()
+                                                        .fill(Color.spotifyGreen)
+                                                )
                                         }
                                     }
                                     Spacer()
                                 }
                                 .padding(4)
+                            )
+                    } else if isLoadingThumbnail {
+                        // Show loading indicator
+                        ZStack {
+                            Image(systemName: "location.fill")
+                                .font(.title2)
+                                .foregroundColor(.black)
+                                .opacity(0.3)
+                            
+                            ProgressView()
+                                .scaleEffect(0.7)
+                                .tint(.black)
+                        }
+                    } else {
+                        // Show location icon with photo indicator
+                        Image(systemName: "location.fill")
+                            .font(.title2)
+                            .foregroundColor(.black)
+                        
+                        // Photo indicator overlay
+                        if !location.photoIdentifiers.isEmpty {
+                            VStack {
+                                HStack {
+                                    Spacer()
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.white)
+                                            .frame(width: 18, height: 18)
+                                        
+                                        if location.photoIdentifiers.count == 1 {
+                                            Image(systemName: "camera.fill")
+                                                .font(.caption2)
+                                                .foregroundColor(.spotifyGreen)
+                                        } else {
+                                            Text("\(location.photoIdentifiers.count)")
+                                                .font(.caption2)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.spotifyGreen)
+                                        }
+                                    }
+                                }
+                                Spacer()
                             }
+                            .padding(4)
                         }
                     }
-                    
-                    Spacer()
                 }
                 
-                // Location Info
+                Spacer()
+            }
+            
+            // Location Info (Tappable)
+            Button(action: onTap) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(location.address)
                         .font(.headline)
@@ -115,6 +116,7 @@ struct SpotifyLocationRow: View {
                         .foregroundColor(.white)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     
                     HStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -152,6 +154,7 @@ struct SpotifyLocationRow: View {
                                 .foregroundColor(.white)
                                 .lineLimit(3)
                                 .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
                     
@@ -174,20 +177,36 @@ struct SpotifyLocationRow: View {
                         }
                     }
                 }
+            }
+            .buttonStyle(.plain)
+            
+            // Action Buttons
+            VStack(spacing: 8) {
+                // NEW: Map Button
+                Button(action: onMapTap) {
+                    Image(systemName: "map")
+                        .font(.headline)
+                        .foregroundColor(.spotifyGreen)
+                        .frame(width: 32, height: 32)
+                        .background(
+                            Circle()
+                                .fill(Color.spotifyMediumGray.opacity(0.6))
+                        )
+                }
+                .buttonStyle(.plain)
                 
-                Spacer()
-                
-                // Edit indicator
-                VStack(spacing: 8) {
+                // Details Arrow
+                Button(action: onTap) {
                     Image(systemName: "chevron.right")
                         .font(.caption)
                         .foregroundColor(.spotifyTextGray.opacity(0.6))
-                    
-                    Spacer()
+                        .frame(width: 32, height: 32)
                 }
+                .buttonStyle(.plain)
+                
+                Spacer()
             }
         }
-        .buttonStyle(.plain)
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 12)
@@ -195,6 +214,17 @@ struct SpotifyLocationRow: View {
         )
         .onAppear {
             loadFirstThumbnail()
+        }
+        // NEW: Swipe Actions
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(action: onMapTap) {
+                Label("Map", systemImage: "map")
+            }
+            .tint(.spotifyGreen)
+            
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
         }
     }
     
@@ -237,6 +267,7 @@ struct SpotifyLocationRow: View {
         ),
         onDelete: {},
         onTap: {},
+        onMapTap: {}, // NEW: Map tap handler
         photoManager: PhotoManager()
     )
     .preferredColorScheme(.dark)

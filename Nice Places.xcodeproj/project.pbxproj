@@ -38,22 +38,9 @@
 		6AFD84602E3B7A1300B175CE /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		6AFD84532E3A810B00B175CE /* Exceptions for "Nice Places" folder in "Nice Places" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"Nice-Places-Info.plist",
-			);
-			target = 6A6DE3C82E3A524E00474379 /* Nice Places */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		6A6DE3CB2E3A524E00474379 /* Nice Places */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6AFD84532E3A810B00B175CE /* Exceptions for "Nice Places" folder in "Nice Places" target */,
-			);
 			path = "Nice Places";
 			sourceTree = "<group>";
 		};
@@ -438,11 +425,12 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Nice-Places-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "";
-				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
 				INFOPLIST_KEY_NSCameraUsageDescription = "LocationTracker needs camera access to capture photos and videos of your special places.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "LocationTracker uses your location to provide accurate address information and altitude data";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "LocationTracker needs access to your location to show your current address and save location data.";
+				INFOPLIST_KEY_NSMainStoryboardFile = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This feature saves movies to your media gallery";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "LocationTracker saves your location photos to a custom Places album in your photo library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "LocationTracker organizes your location photos in a dedicated Places folder";
@@ -461,7 +449,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -477,11 +465,12 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Nice-Places-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "";
-				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
 				INFOPLIST_KEY_NSCameraUsageDescription = "LocationTracker needs camera access to capture photos and videos of your special places.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "LocationTracker uses your location to provide accurate address information and altitude data";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "LocationTracker needs access to your location to show your current address and save location data.";
+				INFOPLIST_KEY_NSMainStoryboardFile = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This feature saves movies to your media gallery";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "LocationTracker saves your location photos to a custom Places album in your photo library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "LocationTracker organizes your location photos in a dedicated Places folder";
@@ -500,7 +489,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};

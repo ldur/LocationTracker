@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var showingSavedLocations = false
     @State private var showingSaveLocationSheet = false // NEW: Sheet state
     @State private var showingCamera = false // NEW: Camera sheet state
+    @State private var showingMapView = false // NEW: Map view sheet state
     @State private var pulseAnimation = false
     @State private var showingPhotoSavedAlert = false // NEW: Photo saved feedback
     @State private var photoSavedMessage = "" // NEW: Photo saved message
@@ -100,6 +101,58 @@ struct ContentView: View {
                             }
                             .disabled(locationManager.currentLocation == nil)
                             .padding(.horizontal, 24)
+                            
+                            // NEW: View Map Button (only show when location is available)
+                            if locationManager.currentLocation != nil {
+                                Button(action: {
+                                    showingMapView = true
+                                }) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "map.fill")
+                                            .font(.title2)
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("View on Map")
+                                                .font(.headline)
+                                                .fontWeight(.semibold)
+                                            
+                                            Text("See 10km radius around your location")
+                                                .font(.caption)
+                                                .opacity(0.8)
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: "arrow.up.right")
+                                            .font(.subheadline)
+                                            .opacity(0.7)
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 16)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [
+                                                Color.spotifyMediumGray,
+                                                Color.spotifyMediumGray.opacity(0.8)
+                                            ],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.spotifyGreen.opacity(0.3), lineWidth: 1)
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                                .padding(.horizontal, 24)
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .bottom).combined(with: .opacity),
+                                    removal: .move(edge: .bottom).combined(with: .opacity)
+                                ))
+                            }
                             
                             // NEW: Camera Button (only show when location is available)
                             if locationManager.currentLocation != nil {
@@ -218,6 +271,18 @@ struct ContentView: View {
                         },
                         onDismiss: {
                             showingCamera = false
+                        }
+                    )
+                }
+            }
+            .fullScreenCover(isPresented: $showingMapView) {
+                // NEW: Map view for current location
+                if let location = locationManager.currentLocation {
+                    LocationMapView(
+                        location: location,
+                        address: locationManager.currentAddress,
+                        onDismiss: {
+                            showingMapView = false
                         }
                     )
                 }

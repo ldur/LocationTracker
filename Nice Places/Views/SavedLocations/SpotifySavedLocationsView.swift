@@ -10,6 +10,8 @@ struct SpotifySavedLocationsView: View {
     @State private var photoManager = PhotoManager()
     @State private var locationToEdit: LocationData?
     @State private var selectedLocation: LocationData?
+    @State private var locationToViewOnMap: LocationData? // NEW: For map view
+    @State private var showingAllLocationsMap = false // NEW: For all locations map
     
     var body: some View {
         NavigationStack {
@@ -52,12 +54,22 @@ struct SpotifySavedLocationsView: View {
                         
                         Spacer()
                         
-                        // Clear all button (only show if there are locations)
+                        // View All on Map button (NEW)
                         if !dataManager.savedLocations.isEmpty {
-                            Button(action: {
-                                dataManager.clearAllLocations()
-                            }) {
-                                Image(systemName: "trash.circle")
+                            Menu {
+                                Button(action: {
+                                    showingAllLocationsMap = true
+                                }) {
+                                    Label("View All on Map", systemImage: "map")
+                                }
+                                
+                                Button(role: .destructive, action: {
+                                    dataManager.clearAllLocations()
+                                }) {
+                                    Label("Clear All", systemImage: "trash")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
                                     .font(.title2)
                                     .foregroundColor(.spotifyTextGray)
                             }
@@ -108,9 +120,24 @@ struct SpotifySavedLocationsView: View {
                                         onTap: {
                                             selectedLocation = location
                                         },
+                                        onMapTap: { // NEW: Map tap handler
+                                            locationToViewOnMap = location
+                                        },
                                         photoManager: photoManager
                                     )
                                     .contextMenu {
+                                        Button(action: {
+                                            selectedLocation = location
+                                        }) {
+                                            Label("View Details", systemImage: "eye")
+                                        }
+                                        
+                                        Button(action: {
+                                            locationToViewOnMap = location
+                                        }) {
+                                            Label("View on Map", systemImage: "map")
+                                        }
+                                        
                                         Button(action: {
                                             locationToEdit = location
                                         }) {
@@ -159,6 +186,27 @@ struct SpotifySavedLocationsView: View {
                     }
                 }
             }
+        }
+        .fullScreenCover(item: $locationToViewOnMap) { location in
+            // NEW: Map view for saved location
+            SavedLocationMapView(
+                location: location,
+                onDismiss: { locationToViewOnMap = nil }
+            )
+        }
+        .fullScreenCover(isPresented: $showingAllLocationsMap) {
+            // NEW: All locations map view
+            AllLocationsMapView(
+                locations: dataManager.savedLocations,
+                onDismiss: { showingAllLocationsMap = false },
+                onLocationSelected: { location in
+                    showingAllLocationsMap = false
+                    // Small delay to allow map to dismiss before showing detail
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        selectedLocation = location
+                    }
+                }
+            )
         }
     }
 }

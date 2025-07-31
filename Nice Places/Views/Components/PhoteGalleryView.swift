@@ -343,11 +343,16 @@ struct PhotoViewerPage: View {
     }
     
     private func playVideo() {
+        // Check if we have a valid video asset
+        guard photoManager.getAsset(for: identifier) != nil else {
+            print("No video asset found for identifier: \(identifier)")
+            return
+        }
+        
         // TODO: Implement video playback
         // For now, we'll use the system photo viewer
-        if let asset = photoManager.getAsset(for: identifier) {
-            // Could implement AVPlayerViewController here
-        }
+        // Could implement AVPlayerViewController here in the future
+        print("Video playback not yet implemented for identifier: \(identifier)")
     }
 }
 

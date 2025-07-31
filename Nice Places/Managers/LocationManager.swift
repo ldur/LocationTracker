@@ -20,6 +20,7 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBest
         manager.distanceFilter = 10
+        authorizationStatus = manager.authorizationStatus
     }
     
     func requestLocation() {
@@ -29,14 +30,22 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
         case .denied, .restricted:
             errorMessage = "Location access denied. Please enable in Settings."
         case .authorizedWhenInUse, .authorizedAlways:
-            startLocationUpdates()
+            Task {
+                await startLocationUpdates()
+            }
         @unknown default:
             break
         }
     }
     
-    private func startLocationUpdates() {
-        guard CLLocationManager.locationServicesEnabled() else {
+    @MainActor
+    private func startLocationUpdates() async {
+        // Check location services on background queue to avoid main thread blocking
+        let servicesEnabled = await Task.detached {
+            CLLocationManager.locationServicesEnabled()
+        }.value
+        
+        guard servicesEnabled else {
             errorMessage = "Location services are disabled."
             return
         }
@@ -50,6 +59,7 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
         manager.startUpdatingLocation()
     }
     
+    @MainActor
     private func stopLocationUpdates() {
         manager.stopUpdatingLocation()
         isUpdatingLocation = false
@@ -61,33 +71,38 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
         
         // Validate location data before using it
         guard location.coordinate.latitude.isFinite && location.coordinate.longitude.isFinite else {
-            errorMessage = "Invalid location data received"
+            Task { @MainActor in
+                errorMessage = "Invalid location data received"
+            }
             return
         }
         
-        currentLocation = location
-        
-        Task {
+        Task { @MainActor in
+            currentLocation = location
             await reverseGeocode(location: location)
         }
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        errorMessage = "Location error: \(error.localizedDescription)"
-        isUpdatingLocation = false
+        Task { @MainActor in
+            errorMessage = "Location error: \(error.localizedDescription)"
+            isUpdatingLocation = false
+        }
     }
     
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        authorizationStatus = manager.authorizationStatus
-        
-        switch authorizationStatus {
-        case .authorizedWhenInUse, .authorizedAlways:
-            startLocationUpdates()
-        case .denied, .restricted:
-            errorMessage = "Location access denied."
-            stopLocationUpdates()
-        default:
-            break
+        Task { @MainActor in
+            authorizationStatus = manager.authorizationStatus
+            
+            switch authorizationStatus {
+            case .authorizedWhenInUse, .authorizedAlways:
+                await startLocationUpdates()
+            case .denied, .restricted:
+                errorMessage = "Location access denied."
+                stopLocationUpdates()
+            default:
+                break
+            }
         }
     }
     
@@ -125,5 +140,44 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
         }
         
         return components.isEmpty ? "Unknown Address" : components.joined(separator: ", ")
+    }
+    
+    // MARK: - Public Utility Methods
+    
+    /// Safely check if location services are enabled without blocking main thread
+    func checkLocationServicesEnabled() async -> Bool {
+        return await Task.detached {
+            CLLocationManager.locationServicesEnabled()
+        }.value
+    }
+    
+    /// Get location accuracy description
+    var accuracyDescription: String {
+        guard let location = currentLocation else { return "Unknown" }
+        
+        let accuracy = location.horizontalAccuracy
+        if accuracy < 0 {
+            return "Invalid"
+        } else if accuracy < 5 {
+            return "Excellent"
+        } else if accuracy < 10 {
+            return "Good"
+        } else if accuracy < 50 {
+            return "Fair"
+        } else {
+            return "Poor"
+        }
+    }
+    
+    /// Force refresh location
+    func refreshLocation() {
+        guard authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways else {
+            requestLocation()
+            return
+        }
+        
+        Task {
+            await startLocationUpdates()
+        }
     }
 }

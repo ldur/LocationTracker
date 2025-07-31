@@ -81,11 +81,14 @@ class PhotoManager: NSObject {
         
         Task {
             do {
-                var assetIdentifier: String?
+                // Capture the identifier before the performChanges block
+                var capturedIdentifier: String?
                 
                 try await PHPhotoLibrary.shared().performChanges {
                     let creationRequest = PHAssetChangeRequest.creationRequestForAsset(from: image)
-                    assetIdentifier = creationRequest.placeholderForCreatedAsset?.localIdentifier
+                    
+                    // Store the identifier immediately
+                    capturedIdentifier = creationRequest.placeholderForCreatedAsset?.localIdentifier
                     
                     // Add to custom album if available
                     if let album = self.placesAlbum,
@@ -96,7 +99,7 @@ class PhotoManager: NSObject {
                 }
                 
                 await MainActor.run {
-                    completion(assetIdentifier)
+                    completion(capturedIdentifier)
                 }
             } catch {
                 await MainActor.run {
@@ -125,11 +128,14 @@ class PhotoManager: NSObject {
         
         Task {
             do {
-                var assetIdentifier: String?
+                // Capture the identifier before the performChanges block
+                var capturedIdentifier: String?
                 
                 try await PHPhotoLibrary.shared().performChanges {
                     let creationRequest = PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
-                    assetIdentifier = creationRequest?.placeholderForCreatedAsset?.localIdentifier
+                    
+                    // Store the identifier immediately
+                    capturedIdentifier = creationRequest?.placeholderForCreatedAsset?.localIdentifier
                     
                     // Add to custom album if available
                     if let album = self.placesAlbum,
@@ -140,7 +146,7 @@ class PhotoManager: NSObject {
                 }
                 
                 await MainActor.run {
-                    completion(assetIdentifier)
+                    completion(capturedIdentifier)
                 }
             } catch {
                 await MainActor.run {
