@@ -8,10 +8,15 @@ struct ContentView: View {
     @State private var locationManager = LocationManager()
     @State private var dataManager = DataManager()
     @State private var photoManager = PhotoManager() // NEW: Photo manager
+    @State private var tripManager = TripManager() // NEW: Trip manager
     @State private var showingSavedLocations = false
     @State private var showingSaveLocationSheet = false // NEW: Sheet state
     @State private var showingCamera = false // NEW: Camera sheet state
     @State private var showingMapView = false // NEW: Map view sheet state
+    @State private var showingTripsView = false // NEW: Trips view
+    @State private var showingStartTripSheet = false // NEW: Start trip sheet
+    @State private var showingTripAssignment = false // NEW: Trip assignment
+    @State private var locationForTripAssignment: LocationData? // NEW: Location to assign
     @State private var pulseAnimation = false
     @State private var showingPhotoSavedAlert = false // NEW: Photo saved feedback
     @State private var photoSavedMessage = "" // NEW: Photo saved message
@@ -50,6 +55,24 @@ struct ContentView: View {
                                 
                                 Spacer()
                                 
+                                // Trips button
+                                Button(action: { showingTripsView = true }) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "map.circle")
+                                            .font(.headline)
+                                        Text("Trips")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                    }
+                                    .foregroundColor(.spotifyGreen)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.spotifyGreen.opacity(0.2))
+                                    )
+                                }
+                                
                                 // Status indicator
                                 Circle()
                                     .fill(locationManager.isUpdatingLocation ? Color.spotifyGreen : Color.spotifyTextGray)
@@ -65,6 +88,20 @@ struct ContentView: View {
                         }
                         .padding(.horizontal, 24)
                         .padding(.top, 20)
+                        
+                        // Active Trip Banner (NEW)
+                        if let activeTrip = tripManager.activeTrip {
+                            ActiveTripBanner(
+                                trip: activeTrip,
+                                locationCount: activeTrip.locationIds.count,
+                                onTap: {
+                                    // Could show trip detail here
+                                },
+                                onEnd: {
+                                    tripManager.endActiveTrip()
+                                }
+                            )
+                        }
                         
                         // Current Location Card
                         SpotifyLocationCard(
@@ -116,7 +153,7 @@ struct ContentView: View {
                                                 .font(.headline)
                                                 .fontWeight(.semibold)
                                             
-                                            Text("See 10km radius around your location")
+                                            Text("See 500m radius around your location")
                                                 .font(.caption)
                                                 .opacity(0.8)
                                         }
@@ -166,6 +203,8 @@ struct ContentView: View {
                                         Text("Capture This Moment")
                                             .font(.headline)
                                             .fontWeight(.medium)
+                                        
+                                        Spacer() // Push content to the left
                                     }
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
@@ -295,21 +334,52 @@ struct ContentView: View {
             } message: {
                 Text(photoSavedMessage)
             }
+            .sheet(isPresented: $showingTripsView) {
+                TripsView(tripManager: tripManager, dataManager: dataManager)
+            }
+            .sheet(isPresented: $showingStartTripSheet) {
+                StartTripSheet { name, description, color in
+                    let _ = tripManager.startNewTrip(name: name, description: description, color: color)
+                }
+            }
+            .sheet(isPresented: $showingTripAssignment) {
+                if let location = locationForTripAssignment {
+                    TripAssignmentSheet(
+                        location: location,
+                        availableTrips: tripManager.savedTrips.filter { !$0.isActive },
+                        onAssignToTrip: { trip in
+                            tripManager.addLocationToTrip(location.id, tripId: trip.id)
+                        },
+                        onCreateNewTrip: {
+                            showingStartTripSheet = true
+                        }
+                    )
+                }
+            }
         }
     }
     
     private func saveCurrentLocation(with comment: String? = nil, photoIdentifiers: [String] = []) { // NEW: Added photo identifiers parameter
-        guard let location = locationManager.currentLocation else { return }
+        guard let currentLocation = locationManager.currentLocation else { return }
         
         let locationData = LocationData(
             address: locationManager.currentAddress,
-            coordinate: location.coordinate,
-            altitude: location.altitude,
+            coordinate: currentLocation.coordinate,
+            altitude: currentLocation.altitude,
             comment: comment, // NEW: Pass comment to LocationData
             photoIdentifiers: photoIdentifiers // NEW: Pass photo identifiers
         )
         
         dataManager.saveLocation(locationData)
+        
+        // NEW: Auto-assign to active trip
+        if let activeTrip = tripManager.activeTrip {
+            tripManager.addLocationToActiveTrip(locationData.id)
+        } else if !tripManager.savedTrips.isEmpty {
+            // Show trip assignment option if there are existing trips
+            locationForTripAssignment = locationData
+            showingTripAssignment = true
+        }
         
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
@@ -318,7 +388,7 @@ struct ContentView: View {
     
     // NEW: Handle captured image from camera
     private func handleCapturedImage(_ image: UIImage) {
-        guard let location = locationManager.currentLocation else { return }
+        guard locationManager.currentLocation != nil else { return }
         
         print("Handling captured image...")
         
@@ -337,7 +407,7 @@ struct ContentView: View {
     
     // NEW: Handle captured video from camera
     private func handleCapturedVideo(_ url: URL) {
-        guard let location = locationManager.currentLocation else { return }
+        guard locationManager.currentLocation != nil else { return }
         
         print("Handling captured video...")
         
@@ -356,13 +426,13 @@ struct ContentView: View {
     
     // NEW: Save location with photo/video
     private func saveLocationWithPhoto(_ photoIdentifier: String, type: String) {
-        guard let location = locationManager.currentLocation else { return }
+        guard let currentLocation = locationManager.currentLocation else { return }
         
         print("Saving location with \(type), photo ID: \(photoIdentifier)")
         
         // Check if current location already exists (similar address and within 100m)
         let existingLocation = dataManager.savedLocations.first { savedLocation in
-            let distance = CLLocation(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
+            let distance = CLLocation(latitude: currentLocation.coordinate.latitude, longitude: currentLocation.coordinate.longitude)
                 .distance(from: CLLocation(latitude: savedLocation.coordinate.latitude, longitude: savedLocation.coordinate.longitude))
             
             // More flexible matching - within 100m OR very similar address
