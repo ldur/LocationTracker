@@ -11,6 +11,7 @@ struct TripDetailView: View {
     
     @State private var showingMapView = false
     @State private var showingEditSheet = false
+    @State private var selectedLocation: LocationData? // NEW: For location detail view
     @State private var photoManager = PhotoManager()
     
     private var tripLocations: [LocationData] {
@@ -258,7 +259,7 @@ struct TripDetailView: View {
                                             tripColor: trip.color.color,
                                             photoManager: photoManager,
                                             onTap: {
-                                                // Navigate to location detail
+                                                selectedLocation = location // NEW: Set selected location
                                             },
                                             onRemove: {
                                                 tripManager.removeLocationFromTrip(location.id, tripId: trip.id)
@@ -348,6 +349,23 @@ struct TripDetailView: View {
                 }
             )
         }
+        .fullScreenCover(item: $selectedLocation) { location in
+            // NEW: Location detail view
+            NavigationStack {
+                LocationDetailView(
+                    dataManager: dataManager,
+                    location: location
+                )
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Done") {
+                            selectedLocation = nil
+                        }
+                        .foregroundColor(.white)
+                    }
+                }
+            }
+        }
     }
     
     private func formatDistance(_ distance: Double) -> String {
@@ -371,76 +389,79 @@ struct TripLocationRow: View {
     @State private var thumbnail: UIImage?
     
     var body: some View {
-        HStack(spacing: 16) {
-            // Step indicator
-            ZStack {
-                Circle()
-                    .fill(tripColor.opacity(0.2))
-                    .frame(width: 32, height: 32)
-                
-                Text("\(index)")
-                    .font(.caption)
-                    .fontWeight(.bold)
-                    .foregroundColor(tripColor)
-            }
-            
-            // Location preview
-            if let thumbnail = thumbnail {
-                Image(uiImage: thumbnail)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 50, height: 50)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            } else {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.spotifyLightGray)
-                    .frame(width: 50, height: 50)
-                    .overlay(
-                        Image(systemName: "location.fill")
-                            .font(.headline)
-                            .foregroundColor(.spotifyGreen)
-                    )
-            }
-            
-            // Location info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(location.address)
-                    .font(.headline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                
-                HStack(spacing: 8) {
-                    Text(location.timestamp, style: .time)
-                        .font(.caption)
-                        .foregroundColor(.spotifyTextGray)
+        Button(action: onTap) { // NEW: Make entire row tappable
+            HStack(spacing: 16) {
+                // Step indicator
+                ZStack {
+                    Circle()
+                        .fill(tripColor.opacity(0.2))
+                        .frame(width: 32, height: 32)
                     
-                    if !location.photoIdentifiers.isEmpty {
-                        Text("•")
+                    Text("\(index)")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(tripColor)
+                }
+                
+                // Location preview
+                if let thumbnail = thumbnail {
+                    Image(uiImage: thumbnail)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 50, height: 50)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.spotifyLightGray)
+                        .frame(width: 50, height: 50)
+                        .overlay(
+                            Image(systemName: "location.fill")
+                                .font(.headline)
+                                .foregroundColor(.spotifyGreen)
+                        )
+                }
+                
+                // Location info
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(location.address)
+                        .font(.headline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    
+                    HStack(spacing: 8) {
+                        Text(location.timestamp, style: .time)
                             .font(.caption)
                             .foregroundColor(.spotifyTextGray)
                         
-                        HStack(spacing: 4) {
-                            Image(systemName: "photo")
-                                .font(.caption2)
-                            Text("\(location.photoIdentifiers.count)")
-                                .font(.caption2)
+                        if !location.photoIdentifiers.isEmpty {
+                            Text("•")
+                                .font(.caption)
+                                .foregroundColor(.spotifyTextGray)
+                            
+                            HStack(spacing: 4) {
+                                Image(systemName: "photo")
+                                    .font(.caption2)
+                                Text("\(location.photoIdentifiers.count)")
+                                    .font(.caption2)
+                            }
+                            .foregroundColor(tripColor)
                         }
-                        .foregroundColor(tripColor)
                     }
                 }
+                
+                Spacer()
+                
+                Button(action: onRemove) {
+                    Image(systemName: "minus.circle")
+                        .font(.headline)
+                        .foregroundColor(.spotifyTextGray.opacity(0.6))
+                }
+                .buttonStyle(.plain)
             }
-            
-            Spacer()
-            
-            Button(action: onRemove) {
-                Image(systemName: "minus.circle")
-                    .font(.headline)
-                    .foregroundColor(.spotifyTextGray.opacity(0.6))
-            }
-            .buttonStyle(.plain)
         }
+        .buttonStyle(.plain) // NEW: Use plain button style
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 12)
