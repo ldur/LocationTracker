@@ -191,6 +191,58 @@ struct ContentView: View {
                                 ))
                             }
                             
+                            // NEW: Share Position Button (only show when location is available)
+                            if locationManager.currentLocation != nil {
+                                Button(action: {
+                                    shareCurrentPosition()
+                                }) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "location.fill.viewfinder")
+                                            .font(.title2)
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Share My Position")
+                                                .font(.headline)
+                                                .fontWeight(.semibold)
+                                            
+                                            Text("Send your current location to others")
+                                                .font(.caption)
+                                                .opacity(0.8)
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: "square.and.arrow.up")
+                                            .font(.subheadline)
+                                            .opacity(0.7)
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 16)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [
+                                                Color.spotifyGreen.opacity(0.8),
+                                                Color.spotifyGreen.opacity(0.6)
+                                            ],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.spotifyGreen, lineWidth: 1)
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                                .padding(.horizontal, 24)
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .bottom).combined(with: .opacity),
+                                    removal: .move(edge: .bottom).combined(with: .opacity)
+                                ))
+                            }
+                            
                             // NEW: Camera Button (only show when location is available)
                             if locationManager.currentLocation != nil {
                                 Button(action: {
@@ -475,5 +527,108 @@ struct ContentView: View {
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.impactOccurred()
+    }
+    
+    // MARK: - Share Position Functions
+    
+    private func shareCurrentPosition() {
+        guard let currentLocation = locationManager.currentLocation else { return }
+        
+        // Get device/user name for personalization
+        let deviceName = UIDevice.current.name
+        let userName = extractUserName(from: deviceName)
+        
+        // Create timestamp in DD.MM.YYYY - HH:MM format
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd.MM.yyyy - HH:mm"
+        let timestamp = formatter.string(from: Date())
+        
+        // Create Apple Maps URL with location name for better display
+        let coordinate = currentLocation.coordinate
+        let encodedAddress = locationManager.currentAddress.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let appleMapURL = "http://maps.apple.com/?ll=\(coordinate.latitude),\(coordinate.longitude)&q=\(encodedAddress)"
+        
+        // Create the share message in new format
+        let shareText = """
+        \(userName) has shared their current position with you
+        
+        Date: \(timestamp)
+        
+        \(locationManager.currentAddress)
+        
+        📱 Shared from Nice Places app
+        """
+        
+        // Create activity items - separate text and URL for better link handling
+        let activityItems: [Any] = [
+            shareText,
+            URL(string: appleMapURL)!
+        ]
+        
+        // Present activity controller
+        presentActivityController(with: activityItems)
+        
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+    }
+    
+    private func extractUserName(from deviceName: String) -> String {
+        // Extract user name from device name (e.g., "John's iPhone" -> "John")
+        let commonSuffixes = ["'s iPhone", "'s iPad", "'s iPod", " iPhone", " iPad", " iPod"]
+        var name = deviceName
+        
+        for suffix in commonSuffixes {
+            if name.hasSuffix(suffix) {
+                name = String(name.dropLast(suffix.count))
+                break
+            }
+        }
+        
+        // If no name found or it's generic, use "Someone"
+        if name.isEmpty || name.lowercased().contains("iphone") || name.lowercased().contains("ipad") {
+            return "Someone"
+        }
+        
+        return name
+    }
+    
+    private func presentActivityController(with items: [Any]) {
+        let activityVC = UIActivityViewController(
+            activityItems: items,
+            applicationActivities: nil
+        )
+        
+        // Configure for iPad
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = UIApplication.shared.windows.first
+            popover.sourceRect = CGRect(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        
+        // Customize sharing options
+        activityVC.excludedActivityTypes = [
+            .addToReadingList,
+            .assignToContact,
+            .openInIBooks,
+            .postToVimeo,
+            .postToWeibo,
+            .postToFlickr,
+            .postToTencentWeibo
+        ]
+        
+        // Present the activity controller
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let rootViewController = window.rootViewController {
+            
+            // Find the top-most view controller
+            var topController = rootViewController
+            while let presentedController = topController.presentedViewController {
+                topController = presentedController
+            }
+            
+            topController.present(activityVC, animated: true)
+        }
     }
 }

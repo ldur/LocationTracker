@@ -161,6 +161,52 @@ struct LocationDetailView: View {
                             }
                             .padding(.horizontal, 24)
                             
+                            // Share Location Button (NEW)
+                            Button(action: {
+                                shareLocation()
+                            }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "location.fill.viewfinder")
+                                        .font(.title2)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Share This Location")
+                                            .font(.headline)
+                                            .fontWeight(.semibold)
+                                        
+                                        Text("Send this saved location to others")
+                                            .font(.caption)
+                                            .opacity(0.8)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "square.and.arrow.up")
+                                        .font(.subheadline)
+                                        .opacity(0.7)
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 16)
+                                .background(
+                                    LinearGradient(
+                                        colors: [
+                                            Color.spotifyGreen.opacity(0.8),
+                                            Color.spotifyGreen.opacity(0.6)
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.spotifyGreen, lineWidth: 1)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            .padding(.horizontal, 24)
+                            
                             // View on Map Button
                             Button(action: { showingMapView = true }) {
                                 HStack(spacing: 12) {
@@ -364,6 +410,122 @@ struct LocationDetailView: View {
             photoIdentifiers: location.photoIdentifiers + [identifier]
         )
         dataManager.updateLocation(updatedLocation)
+    }
+    
+    // MARK: - Share Location Function (NEW)
+    private func shareLocation() {
+        // Get device/user name for personalization
+        let deviceName = UIDevice.current.name
+        let userName = extractUserName(from: deviceName)
+        
+        // Create timestamp in DD.MM.YYYY - HH:MM format
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd.MM.yyyy - HH:mm"
+        let timestamp = formatter.string(from: Date())
+        
+        // Create Apple Maps URL with location name for better display
+        let coordinate = location.coordinate
+        let encodedAddress = location.address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let appleMapURL = "http://maps.apple.com/?ll=\(coordinate.latitude),\(coordinate.longitude)&q=\(encodedAddress)"
+        
+        // Create the share message in new format
+        var shareText = """
+        \(userName) has shared a saved location with you
+        
+        Date: \(timestamp)
+        
+        \(location.address)
+        """
+        
+        // Add comment if available
+        if let comment = location.comment, !comment.isEmpty {
+            shareText += "\n\nNote: \(comment)"
+        }
+        
+        // Add saved date
+        let savedFormatter = DateFormatter()
+        savedFormatter.dateFormat = "dd.MM.yyyy - HH:mm"
+        let savedDate = savedFormatter.string(from: location.timestamp)
+        shareText += "\n\nOriginally saved: \(savedDate)"
+        
+        // Add photo count if available
+        if !location.photoIdentifiers.isEmpty {
+            shareText += "\nPhotos: \(location.photoIdentifiers.count)"
+        }
+        
+        shareText += "\n\n📱 Shared from Nice Places app"
+        
+        // Create activity items - separate text and URL for better link handling
+        let activityItems: [Any] = [
+            shareText,
+            URL(string: appleMapURL)!
+        ]
+        
+        // Present activity controller
+        presentActivityController(with: activityItems)
+        
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+    }
+    
+    private func extractUserName(from deviceName: String) -> String {
+        // Extract user name from device name (e.g., "John's iPhone" -> "John")
+        let commonSuffixes = ["'s iPhone", "'s iPad", "'s iPod", " iPhone", " iPad", " iPod"]
+        var name = deviceName
+        
+        for suffix in commonSuffixes {
+            if name.hasSuffix(suffix) {
+                name = String(name.dropLast(suffix.count))
+                break
+            }
+        }
+        
+        // If no name found or it's generic, use "Someone"
+        if name.isEmpty || name.lowercased().contains("iphone") || name.lowercased().contains("ipad") {
+            return "Someone"
+        }
+        
+        return name
+    }
+    
+    private func presentActivityController(with items: [Any]) {
+        let activityVC = UIActivityViewController(
+            activityItems: items,
+            applicationActivities: nil
+        )
+        
+        // Configure for iPad
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = UIApplication.shared.windows.first
+            popover.sourceRect = CGRect(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        
+        // Customize sharing options
+        activityVC.excludedActivityTypes = [
+            .addToReadingList,
+            .assignToContact,
+            .openInIBooks,
+            .postToVimeo,
+            .postToWeibo,
+            .postToFlickr,
+            .postToTencentWeibo
+        ]
+        
+        // Present the activity controller
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let rootViewController = window.rootViewController {
+            
+            // Find the top-most view controller
+            var topController = rootViewController
+            while let presentedController = topController.presentedViewController {
+                topController = presentedController
+            }
+            
+            topController.present(activityVC, animated: true)
+        }
     }
 }
 

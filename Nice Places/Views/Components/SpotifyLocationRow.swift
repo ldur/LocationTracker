@@ -182,7 +182,20 @@ struct SpotifyLocationRow: View {
             
             // Action Buttons
             VStack(spacing: 8) {
-                // NEW: Map Button
+                // NEW: Share Button
+                Button(action: { shareLocation() }) {
+                    Image(systemName: "location.fill.viewfinder")
+                        .font(.headline)
+                        .foregroundColor(.spotifyGreen)
+                        .frame(width: 32, height: 32)
+                        .background(
+                            Circle()
+                                .fill(Color.spotifyMediumGray.opacity(0.6))
+                        )
+                }
+                .buttonStyle(.plain)
+                
+                // Map Button
                 Button(action: onMapTap) {
                     Image(systemName: "map")
                         .font(.headline)
@@ -215,12 +228,17 @@ struct SpotifyLocationRow: View {
         .onAppear {
             loadFirstThumbnail()
         }
-        // NEW: Swipe Actions
+        // NEW: Enhanced Swipe Actions with Share
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(action: { shareLocation() }) {
+                Label("Share", systemImage: "location.fill.viewfinder")
+            }
+            .tint(.spotifyGreen)
+            
             Button(action: onMapTap) {
                 Label("Map", systemImage: "map")
             }
-            .tint(.spotifyGreen)
+            .tint(.blue)
             
             Button(role: .destructive, action: onDelete) {
                 Label("Delete", systemImage: "trash")
@@ -252,6 +270,122 @@ struct SpotifyLocationRow: View {
                 isLoadingThumbnail = false
                 self.firstThumbnail = thumbnail
             }
+        }
+    }
+    
+    // MARK: - Share Location Function (NEW)
+    private func shareLocation() {
+        // Get device/user name for personalization
+        let deviceName = UIDevice.current.name
+        let userName = extractUserName(from: deviceName)
+        
+        // Create timestamp in DD.MM.YYYY - HH:MM format
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd.MM.yyyy - HH:mm"
+        let timestamp = formatter.string(from: Date())
+        
+        // Create Apple Maps URL with location name for better display
+        let coordinate = location.coordinate
+        let encodedAddress = location.address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let appleMapURL = "http://maps.apple.com/?ll=\(coordinate.latitude),\(coordinate.longitude)&q=\(encodedAddress)"
+        
+        // Create the share message in new format
+        var shareText = """
+        \(userName) has shared a saved location with you
+        
+        Date: \(timestamp)
+        
+        \(location.address)
+        """
+        
+        // Add comment if available
+        if let comment = location.comment, !comment.isEmpty {
+            shareText += "\n\nNote: \(comment)"
+        }
+        
+        // Add saved date
+        let savedFormatter = DateFormatter()
+        savedFormatter.dateFormat = "dd.MM.yyyy - HH:mm"
+        let savedDate = savedFormatter.string(from: location.timestamp)
+        shareText += "\n\nOriginally saved: \(savedDate)"
+        
+        // Add photo count if available
+        if !location.photoIdentifiers.isEmpty {
+            shareText += "\nPhotos: \(location.photoIdentifiers.count)"
+        }
+        
+        shareText += "\n\n📱 Shared from Nice Places app"
+        
+        // Create activity items - separate text and URL for better link handling
+        let activityItems: [Any] = [
+            shareText,
+            URL(string: appleMapURL)!
+        ]
+        
+        // Present activity controller
+        presentActivityController(with: activityItems)
+        
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
+    }
+    
+    private func extractUserName(from deviceName: String) -> String {
+        // Extract user name from device name (e.g., "John's iPhone" -> "John")
+        let commonSuffixes = ["'s iPhone", "'s iPad", "'s iPod", " iPhone", " iPad", " iPod"]
+        var name = deviceName
+        
+        for suffix in commonSuffixes {
+            if name.hasSuffix(suffix) {
+                name = String(name.dropLast(suffix.count))
+                break
+            }
+        }
+        
+        // If no name found or it's generic, use "Someone"
+        if name.isEmpty || name.lowercased().contains("iphone") || name.lowercased().contains("ipad") {
+            return "Someone"
+        }
+        
+        return name
+    }
+    
+    private func presentActivityController(with items: [Any]) {
+        let activityVC = UIActivityViewController(
+            activityItems: items,
+            applicationActivities: nil
+        )
+        
+        // Configure for iPad
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = UIApplication.shared.windows.first
+            popover.sourceRect = CGRect(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        
+        // Customize sharing options
+        activityVC.excludedActivityTypes = [
+            .addToReadingList,
+            .assignToContact,
+            .openInIBooks,
+            .postToVimeo,
+            .postToWeibo,
+            .postToFlickr,
+            .postToTencentWeibo
+        ]
+        
+        // Present the activity controller
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let rootViewController = window.rootViewController {
+            
+            // Find the top-most view controller
+            var topController = rootViewController
+            while let presentedController = topController.presentedViewController {
+                topController = presentedController
+            }
+            
+            topController.present(activityVC, animated: true)
         }
     }
 }
