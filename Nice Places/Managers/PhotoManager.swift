@@ -157,6 +157,69 @@ class PhotoManager: NSObject {
         }
     }
     
+    // MARK: - Media Import from Library (NEW)
+    func importAssetsToAlbum(_ assets: [PHAsset], completion: @escaping ([String]) -> Void) {
+        guard authorizationStatus == .authorized || authorizationStatus == .limited else {
+            Task {
+                let granted = await requestPhotoLibraryPermission()
+                if granted {
+                    importAssetsToAlbum(assets, completion: completion)
+                } else {
+                    await MainActor.run {
+                        errorMessage = "Photo library access denied"
+                        completion([])
+                    }
+                }
+            }
+            return
+        }
+        
+        Task {
+            do {
+                var importedIdentifiers: [String] = []
+                
+                try await PHPhotoLibrary.shared().performChanges {
+                    // Add assets to our custom album if it exists
+                    if let album = self.placesAlbum {
+                        let albumChangeRequest = PHAssetCollectionChangeRequest(for: album)
+                        albumChangeRequest?.addAssets(assets as NSArray)
+                    }
+                }
+                
+                // Collect the identifiers of the assets we just imported
+                for asset in assets {
+                    importedIdentifiers.append(asset.localIdentifier)
+                }
+                
+                await MainActor.run {
+                    completion(importedIdentifiers)
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Failed to import media: \(error.localizedDescription)"
+                    completion([])
+                }
+            }
+        }
+    }
+    
+    // MARK: - Batch Asset Processing (NEW)
+    func processSelectedAssets(_ assets: [PHAsset], completion: @escaping ([String]) -> Void) {
+        print("📸 PhotoManager: Processing \(assets.count) selected assets")
+        
+        guard !assets.isEmpty else {
+            completion([])
+            return
+        }
+        
+        // For assets selected from the library, we just use their existing identifiers
+        // and add them to our album for organization
+        importAssetsToAlbum(assets) { identifiers in
+            print("✅ PhotoManager: Successfully processed \(identifiers.count) assets")
+            completion(identifiers)
+        }
+    }
+    
     // MARK: - Photo/Video Loading
     func loadThumbnail(for identifier: String, size: CGSize = CGSize(width: 100, height: 100)) async -> UIImage? {
         print("📸 PhotoManager: Attempting to load thumbnail for identifier: \(identifier)")
@@ -294,5 +357,18 @@ class PhotoManager: NSObject {
     
     func photoCount(for identifiers: [String]) -> Int {
         return identifiers.count
+    }
+    
+    // MARK: - Media Library Access (NEW)
+    func checkMediaLibraryAccess() -> PHAuthorizationStatus {
+        return PHPhotoLibrary.authorizationStatus(for: .readWrite)
+    }
+    
+    func requestMediaLibraryAccess() async -> Bool {
+        let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+        await MainActor.run {
+            authorizationStatus = status
+        }
+        return status == .authorized || status == .limited
     }
 }
