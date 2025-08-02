@@ -16,6 +16,7 @@ struct LocationDetailView: View {
     @State private var showingEditSheet = false
     @State private var showingPhotoViewer = false
     @State private var showingMapView = false // NEW: Map view state
+    @State private var showingMediaLibrary = false // NEW: Media library state
     @State private var selectedPhotoIndex = 0
     @State private var thumbnails: [String: UIImage] = [:]
     
@@ -142,27 +143,83 @@ struct LocationDetailView: View {
                         
                         // Action Buttons
                         VStack(spacing: 12) {
-                            // Camera Button
-                            Button(action: { showingCamera = true }) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "camera.fill")
-                                        .font(.title2)
-                                    
-                                    Text("Add Photos & Videos")
-                                        .font(.headline)
-                                        .fontWeight(.semibold)
+                            // NEW: Add Photos Section with Two Options
+                            VStack(spacing: 8) {
+                                // Camera Button
+                                Button(action: { showingCamera = true }) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "camera.fill")
+                                            .font(.title2)
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Take Photos & Videos")
+                                                .font(.headline)
+                                                .fontWeight(.semibold)
+                                            
+                                            Text("Capture new content with your camera")
+                                                .font(.caption)
+                                                .opacity(0.8)
+                                        }
+                                        
+                                        Spacer()
+                                    }
+                                    .foregroundColor(.black)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 16)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(Color.spotifyGreen)
+                                    )
                                 }
-                                .foregroundColor(.black)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 56)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 28)
-                                        .fill(Color.spotifyGreen)
-                                )
+                                .padding(.horizontal, 24)
+                                
+                                // NEW: Add from Library Button
+                                Button(action: { showingMediaLibrary = true }) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "photo.on.rectangle.angled")
+                                            .font(.title2)
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Add from Library")
+                                                .font(.headline)
+                                                .fontWeight(.semibold)
+                                            
+                                            Text("Choose existing photos and videos")
+                                                .font(.caption)
+                                                .opacity(0.8)
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: "plus.circle")
+                                            .font(.subheadline)
+                                            .opacity(0.7)
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 16)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [
+                                                Color.spotifyMediumGray,
+                                                Color.spotifyMediumGray.opacity(0.8)
+                                            ],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .stroke(Color.spotifyGreen.opacity(0.3), lineWidth: 1)
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                                }
+                                .padding(.horizontal, 24)
                             }
-                            .padding(.horizontal, 24)
                             
-                            // Share Location Button (NEW)
+                            // Share Location Button
                             Button(action: {
                                 shareLocation()
                             }) {
@@ -312,7 +369,7 @@ struct LocationDetailView: View {
                                     .fontWeight(.medium)
                                     .foregroundColor(.spotifyTextGray)
                                 
-                                Text("Capture your first memory at this location")
+                                Text("Add your first photos to this location")
                                     .font(.subheadline)
                                     .foregroundColor(.spotifyTextGray.opacity(0.8))
                                     .multilineTextAlignment(.center)
@@ -381,10 +438,22 @@ struct LocationDetailView: View {
             )
         }
         .fullScreenCover(isPresented: $showingMapView) {
-            // NEW: Map view for saved location
             SavedLocationMapView(
                 location: location,
                 onDismiss: { showingMapView = false }
+            )
+        }
+        // NEW: Media Library Sheet
+        .sheet(isPresented: $showingMediaLibrary) {
+            MediaLibraryAccessSheet(
+                maxSelectionCount: 20, // Allow up to 20 items
+                locationContext: location.address,
+                onMediaSelected: { selectedAssets in
+                    handleSelectedMedia(selectedAssets)
+                },
+                onDismiss: {
+                    showingMediaLibrary = false
+                }
             )
         }
     }
@@ -413,9 +482,41 @@ struct LocationDetailView: View {
         dataManager.updateLocation(updatedLocation)
     }
     
-    // MARK: - Share Location Function (NEW)
+    // NEW: Handle multiple photos from media library
+    private func addPhotosToLocation(_ identifiers: [String]) {
+        guard !identifiers.isEmpty else { return }
+        
+        let updatedLocation = LocationData(
+            id: location.id,
+            address: location.address,
+            coordinate: location.coordinate,
+            altitude: location.altitude,
+            timestamp: location.timestamp,
+            comment: location.comment,
+            photoIdentifiers: location.photoIdentifiers + identifiers
+        )
+        dataManager.updateLocation(updatedLocation)
+        
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+    }
+    
+    // NEW: Handle selected media from library
+    private func handleSelectedMedia(_ selectedAssets: [PHAsset]) {
+        print("📸 LocationDetailView: Processing \(selectedAssets.count) selected media items")
+        
+        photoManager.processSelectedAssets(selectedAssets) { identifiers in
+            print("✅ LocationDetailView: Received \(identifiers.count) identifiers")
+            DispatchQueue.main.async {
+                self.addPhotosToLocation(identifiers)
+            }
+        }
+    }
+    
+    // MARK: - Share Location Function
     private func shareLocation() {
-        // Use ProfileManager to get the user name (NEW: Uses profile if available)
+        // Use ProfileManager to get the user name
         let userName = profileManager.getShareName()
         
         // Create timestamp in DD.MM.YYYY - HH:MM format

@@ -2,17 +2,19 @@
 
 import SwiftUI
 import CoreLocation
+import Photos
 
 struct SpotifyLocationRow: View {
     let location: LocationData
     let onDelete: () -> Void
     let onTap: () -> Void
-    let onMapTap: () -> Void // NEW: Map tap handler
+    let onMapTap: () -> Void
+    let onAddPhotos: () -> Void // NEW: Add photos handler
     let photoManager: PhotoManager
     
     @State private var firstThumbnail: UIImage?
     @State private var isLoadingThumbnail = false
-    @State private var profileManager = ProfileManager() // NEW: Profile manager
+    @State private var profileManager = ProfileManager()
     
     var body: some View {
         HStack(spacing: 16) {
@@ -183,7 +185,20 @@ struct SpotifyLocationRow: View {
             
             // Action Buttons
             VStack(spacing: 8) {
-                // NEW: Share Button
+                // NEW: Add Photos Button
+                Button(action: onAddPhotos) {
+                    Image(systemName: "photo.badge.plus")
+                        .font(.headline)
+                        .foregroundColor(.spotifyGreen)
+                        .frame(width: 32, height: 32)
+                        .background(
+                            Circle()
+                                .fill(Color.spotifyMediumGray.opacity(0.6))
+                        )
+                }
+                .buttonStyle(.plain)
+                
+                // Share Button
                 Button(action: { shareLocation() }) {
                     Image(systemName: "location.fill.viewfinder")
                         .font(.headline)
@@ -229,8 +244,13 @@ struct SpotifyLocationRow: View {
         .onAppear {
             loadFirstThumbnail()
         }
-        // NEW: Enhanced Swipe Actions with Share
+        // Enhanced Swipe Actions with Add Photos
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(action: onAddPhotos) {
+                Label("Add Photos", systemImage: "photo.badge.plus")
+            }
+            .tint(.blue)
+            
             Button(action: { shareLocation() }) {
                 Label("Share", systemImage: "location.fill.viewfinder")
             }
@@ -274,9 +294,9 @@ struct SpotifyLocationRow: View {
         }
     }
     
-    // MARK: - Share Location Function (NEW)
+    // MARK: - Share Location Function
     private func shareLocation() {
-        // Use ProfileManager to get the user name (NEW: Uses profile if available)
+        // Use ProfileManager to get the user name
         let userName = profileManager.getShareName()
         
         // Create timestamp in DD.MM.YYYY - HH:MM format
@@ -381,7 +401,8 @@ struct SpotifyLocationRow: View {
         ),
         onDelete: {},
         onTap: {},
-        onMapTap: {}, // NEW: Map tap handler
+        onMapTap: {},
+        onAddPhotos: {}, // NEW: Add photos handler
         photoManager: PhotoManager()
     )
     .preferredColorScheme(.dark)

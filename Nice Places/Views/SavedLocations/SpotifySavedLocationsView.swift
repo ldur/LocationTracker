@@ -2,6 +2,7 @@
 
 import SwiftUI
 import CoreLocation
+import Photos
 
 struct SpotifySavedLocationsView: View {
     @Bindable var dataManager: DataManager
@@ -10,8 +11,10 @@ struct SpotifySavedLocationsView: View {
     @State private var photoManager = PhotoManager()
     @State private var locationToEdit: LocationData?
     @State private var selectedLocation: LocationData?
-    @State private var locationToViewOnMap: LocationData? // NEW: For map view
-    @State private var showingAllLocationsMap = false // NEW: For all locations map
+    @State private var locationToViewOnMap: LocationData?
+    @State private var showingAllLocationsMap = false
+    @State private var locationToAddPhotos: LocationData? // NEW: For adding photos
+    @State private var showingMediaLibrary = false // NEW: Media library state
     
     var body: some View {
         NavigationStack {
@@ -54,7 +57,7 @@ struct SpotifySavedLocationsView: View {
                         
                         Spacer()
                         
-                        // View All on Map button (NEW)
+                        // View All on Map button
                         if !dataManager.savedLocations.isEmpty {
                             Menu {
                                 Button(action: {
@@ -120,8 +123,12 @@ struct SpotifySavedLocationsView: View {
                                         onTap: {
                                             selectedLocation = location
                                         },
-                                        onMapTap: { // NEW: Map tap handler
+                                        onMapTap: {
                                             locationToViewOnMap = location
+                                        },
+                                        onAddPhotos: { // NEW: Handle add photos
+                                            locationToAddPhotos = location
+                                            showingMediaLibrary = true
                                         },
                                         photoManager: photoManager
                                     )
@@ -130,6 +137,13 @@ struct SpotifySavedLocationsView: View {
                                             selectedLocation = location
                                         }) {
                                             Label("View Details", systemImage: "eye")
+                                        }
+                                        
+                                        Button(action: {
+                                            locationToAddPhotos = location
+                                            showingMediaLibrary = true
+                                        }) {
+                                            Label("Add Photos", systemImage: "photo.badge.plus")
                                         }
                                         
                                         Button(action: {
@@ -188,14 +202,12 @@ struct SpotifySavedLocationsView: View {
             }
         }
         .fullScreenCover(item: $locationToViewOnMap) { location in
-            // NEW: Map view for saved location
             SavedLocationMapView(
                 location: location,
                 onDismiss: { locationToViewOnMap = nil }
             )
         }
         .fullScreenCover(isPresented: $showingAllLocationsMap) {
-            // NEW: All locations map view
             AllLocationsMapView(
                 locations: dataManager.savedLocations,
                 onDismiss: { showingAllLocationsMap = false },
@@ -208,6 +220,61 @@ struct SpotifySavedLocationsView: View {
                 }
             )
         }
+        // NEW: Media Library Sheet
+        .sheet(isPresented: $showingMediaLibrary) {
+            MediaLibraryAccessSheet(
+                maxSelectionCount: 20, // Allow up to 20 items
+                locationContext: locationToAddPhotos?.address,
+                onMediaSelected: { selectedAssets in
+                    handleSelectedMedia(selectedAssets)
+                },
+                onDismiss: {
+                    showingMediaLibrary = false
+                    locationToAddPhotos = nil // Clear the location when dismissed
+                }
+            )
+        }
+    }
+    
+    // NEW: Handle selected media from library
+    private func handleSelectedMedia(_ selectedAssets: [PHAsset]) {
+        guard let targetLocation = locationToAddPhotos else {
+            print("❌ No target location for adding photos")
+            return
+        }
+        
+        print("📸 SpotifySavedLocationsView: Processing \(selectedAssets.count) selected media items for location: \(targetLocation.address)")
+        
+        photoManager.processSelectedAssets(selectedAssets) { identifiers in
+            print("✅ SpotifySavedLocationsView: Received \(identifiers.count) identifiers")
+            DispatchQueue.main.async {
+                self.addPhotosToLocation(targetLocation, identifiers: identifiers)
+                self.locationToAddPhotos = nil // Clear after processing
+            }
+        }
+    }
+    
+    // NEW: Add photos to a specific location
+    private func addPhotosToLocation(_ location: LocationData, identifiers: [String]) {
+        guard !identifiers.isEmpty else { return }
+        
+        let updatedLocation = LocationData(
+            id: location.id,
+            address: location.address,
+            coordinate: location.coordinate,
+            altitude: location.altitude,
+            timestamp: location.timestamp,
+            comment: location.comment,
+            photoIdentifiers: location.photoIdentifiers + identifiers
+        )
+        
+        dataManager.updateLocation(updatedLocation)
+        
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+        
+        print("✅ Added \(identifiers.count) photos to location: \(location.address)")
     }
 }
 
