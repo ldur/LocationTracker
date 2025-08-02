@@ -432,6 +432,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Nice-Places-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
 				INFOPLIST_KEY_NSCameraUsageDescription = "LocationTracker needs camera access to capture photos and videos of your special places.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -474,6 +475,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Nice-Places-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
 				INFOPLIST_KEY_NSCameraUsageDescription = "LocationTracker needs camera access to capture photos and videos of your special places.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";

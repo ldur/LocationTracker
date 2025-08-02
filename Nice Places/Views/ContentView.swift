@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var dataManager = DataManager()
     @State private var photoManager = PhotoManager() // NEW: Photo manager
     @State private var tripManager = TripManager() // NEW: Trip manager
+    @State private var profileManager = ProfileManager() // NEW: Profile manager
     @State private var showingSavedLocations = false
     @State private var showingSaveLocationSheet = false // NEW: Sheet state
     @State private var showingCamera = false // NEW: Camera sheet state
@@ -16,6 +17,7 @@ struct ContentView: View {
     @State private var showingTripsView = false // NEW: Trips view
     @State private var showingStartTripSheet = false // NEW: Start trip sheet
     @State private var showingTripAssignment = false // NEW: Trip assignment
+    @State private var showingProfileView = false // NEW: Profile view
     @State private var locationForTripAssignment: LocationData? // NEW: Location to assign
     @State private var pulseAnimation = false
     @State private var showingPhotoSavedAlert = false // NEW: Photo saved feedback
@@ -54,6 +56,42 @@ struct ContentView: View {
                                 }
                                 
                                 Spacer()
+                                
+                                // Profile button (NEW)
+                                Button(action: { showingProfileView = true }) {
+                                    HStack(spacing: 6) {
+                                        if profileManager.isProfileSetup() {
+                                            // Show user initial if profile is set up
+                                            Circle()
+                                                .fill(Color.spotifyGreen)
+                                                .frame(width: 28, height: 28)
+                                                .overlay(
+                                                    Text(String(profileManager.userProfile.name.prefix(1)).uppercased())
+                                                        .font(.caption)
+                                                        .fontWeight(.bold)
+                                                        .foregroundColor(.black)
+                                                )
+                                        } else {
+                                            // Show generic profile icon
+                                            Image(systemName: "person.circle")
+                                                .font(.title2)
+                                                .foregroundColor(.spotifyTextGray)
+                                        }
+                                        
+                                        if !profileManager.isProfileSetup() {
+                                            Text("Profile")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.spotifyTextGray)
+                                        }
+                                    }
+                                    .padding(.horizontal, profileManager.isProfileSetup() ? 0 : 8)
+                                    .padding(.vertical, profileManager.isProfileSetup() ? 0 : 4)
+                                    .background(
+                                        Capsule()
+                                            .fill(profileManager.isProfileSetup() ? Color.clear : Color.spotifyTextGray.opacity(0.2))
+                                    )
+                                }
                                 
                                 // Trips button
                                 Button(action: { showingTripsView = true }) {
@@ -408,6 +446,10 @@ struct ContentView: View {
                     )
                 }
             }
+            .sheet(isPresented: $showingProfileView) {
+                // NEW: Profile view
+                ProfileView(profileManager: profileManager)
+            }
         }
     }
     
@@ -534,9 +576,8 @@ struct ContentView: View {
     private func shareCurrentPosition() {
         guard let currentLocation = locationManager.currentLocation else { return }
         
-        // Get device/user name for personalization
-        let deviceName = UIDevice.current.name
-        let userName = extractUserName(from: deviceName)
+        // Use ProfileManager to get the user name (NEW: Uses profile if available)
+        let userName = profileManager.getShareName()
         
         // Create timestamp in DD.MM.YYYY - HH:MM format
         let formatter = DateFormatter()
@@ -571,26 +612,6 @@ struct ContentView: View {
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
-    }
-    
-    private func extractUserName(from deviceName: String) -> String {
-        // Extract user name from device name (e.g., "John's iPhone" -> "John")
-        let commonSuffixes = ["'s iPhone", "'s iPad", "'s iPod", " iPhone", " iPad", " iPod"]
-        var name = deviceName
-        
-        for suffix in commonSuffixes {
-            if name.hasSuffix(suffix) {
-                name = String(name.dropLast(suffix.count))
-                break
-            }
-        }
-        
-        // If no name found or it's generic, use "Someone"
-        if name.isEmpty || name.lowercased().contains("iphone") || name.lowercased().contains("ipad") {
-            return "Someone"
-        }
-        
-        return name
     }
     
     private func presentActivityController(with items: [Any]) {

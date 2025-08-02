@@ -7,6 +7,7 @@ import Photos
 struct LocationDetailView: View {
     @Bindable var dataManager: DataManager
     @State private var photoManager = PhotoManager()
+    @State private var profileManager = ProfileManager() // NEW: Profile manager
     
     let location: LocationData
     
@@ -414,9 +415,8 @@ struct LocationDetailView: View {
     
     // MARK: - Share Location Function (NEW)
     private func shareLocation() {
-        // Get device/user name for personalization
-        let deviceName = UIDevice.current.name
-        let userName = extractUserName(from: deviceName)
+        // Use ProfileManager to get the user name (NEW: Uses profile if available)
+        let userName = profileManager.getShareName()
         
         // Create timestamp in DD.MM.YYYY - HH:MM format
         let formatter = DateFormatter()
@@ -467,26 +467,6 @@ struct LocationDetailView: View {
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
-    }
-    
-    private func extractUserName(from deviceName: String) -> String {
-        // Extract user name from device name (e.g., "John's iPhone" -> "John")
-        let commonSuffixes = ["'s iPhone", "'s iPad", "'s iPod", " iPhone", " iPad", " iPod"]
-        var name = deviceName
-        
-        for suffix in commonSuffixes {
-            if name.hasSuffix(suffix) {
-                name = String(name.dropLast(suffix.count))
-                break
-            }
-        }
-        
-        // If no name found or it's generic, use "Someone"
-        if name.isEmpty || name.lowercased().contains("iphone") || name.lowercased().contains("ipad") {
-            return "Someone"
-        }
-        
-        return name
     }
     
     private func presentActivityController(with items: [Any]) {
