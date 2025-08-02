@@ -141,12 +141,21 @@ struct ContentView: View {
                             )
                         }
                         
-                        // Current Location Card
+                        // Current Location Card with integrated actions
                         SpotifyLocationCard(
                             address: locationManager.currentAddress,
                             coordinate: locationManager.currentLocation?.coordinate,
                             altitude: locationManager.currentLocation?.altitude,
-                            isUpdating: locationManager.isUpdatingLocation
+                            isUpdating: locationManager.isUpdatingLocation,
+                            onViewMap: {
+                                showingMapView = true
+                            },
+                            onSharePosition: {
+                                shareCurrentPosition()
+                            },
+                            onCapturePhoto: {
+                                showingCamera = true
+                            }
                         )
                         
                         // Action Buttons
@@ -176,141 +185,6 @@ struct ContentView: View {
                             }
                             .disabled(locationManager.currentLocation == nil)
                             .padding(.horizontal, 24)
-                            
-                            // NEW: View Map Button (only show when location is available)
-                            if locationManager.currentLocation != nil {
-                                Button(action: {
-                                    showingMapView = true
-                                }) {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: "map.fill")
-                                            .font(.title2)
-                                        
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text("View on Map")
-                                                .font(.headline)
-                                                .fontWeight(.semibold)
-                                            
-                                            Text("See 500m radius around your location")
-                                                .font(.caption)
-                                                .opacity(0.8)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        Image(systemName: "arrow.up.right")
-                                            .font(.subheadline)
-                                            .opacity(0.7)
-                                    }
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.horizontal, 24)
-                                    .padding(.vertical, 16)
-                                    .background(
-                                        LinearGradient(
-                                            colors: [
-                                                Color.spotifyMediumGray,
-                                                Color.spotifyMediumGray.opacity(0.8)
-                                            ],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    )
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.spotifyGreen.opacity(0.3), lineWidth: 1)
-                                    )
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                }
-                                .padding(.horizontal, 24)
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .bottom).combined(with: .opacity),
-                                    removal: .move(edge: .bottom).combined(with: .opacity)
-                                ))
-                            }
-                            
-                            // NEW: Share Position Button (only show when location is available)
-                            if locationManager.currentLocation != nil {
-                                Button(action: {
-                                    shareCurrentPosition()
-                                }) {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: "location.fill.viewfinder")
-                                            .font(.title2)
-                                        
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text("Share My Position")
-                                                .font(.headline)
-                                                .fontWeight(.semibold)
-                                            
-                                            Text("Send your current location to others")
-                                                .font(.caption)
-                                                .opacity(0.8)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        Image(systemName: "square.and.arrow.up")
-                                            .font(.subheadline)
-                                            .opacity(0.7)
-                                    }
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.horizontal, 24)
-                                    .padding(.vertical, 16)
-                                    .background(
-                                        LinearGradient(
-                                            colors: [
-                                                Color.spotifyGreen.opacity(0.8),
-                                                Color.spotifyGreen.opacity(0.6)
-                                            ],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    )
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.spotifyGreen, lineWidth: 1)
-                                    )
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                }
-                                .padding(.horizontal, 24)
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .bottom).combined(with: .opacity),
-                                    removal: .move(edge: .bottom).combined(with: .opacity)
-                                ))
-                            }
-                            
-                            // NEW: Camera Button (only show when location is available)
-                            if locationManager.currentLocation != nil {
-                                Button(action: {
-                                    showingCamera = true
-                                }) {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: "camera.fill")
-                                            .font(.title2)
-                                        
-                                        Text("Capture This Moment")
-                                            .font(.headline)
-                                            .fontWeight(.medium)
-                                        
-                                        Spacer() // Push content to the left
-                                    }
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.horizontal, 24)
-                                    .padding(.vertical, 16)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.spotifyMediumGray)
-                                    )
-                                }
-                                .padding(.horizontal, 24)
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .bottom).combined(with: .opacity),
-                                    removal: .move(edge: .bottom).combined(with: .opacity)
-                                ))
-                            }
                             
                             // View Saved Locations Button
                             Button(action: { showingSavedLocations = true }) {

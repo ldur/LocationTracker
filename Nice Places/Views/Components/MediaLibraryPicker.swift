@@ -50,19 +50,19 @@ struct MediaLibraryPicker: UIViewControllerRepresentable {
             
             print("📸 MediaLibraryPicker: User selected \(results.count) items")
             
-            // Only process items that have valid assetIdentifiers (no copying!)
+            // Only process items that have valid assetIdentifiers (existing photos in library)
             let validResults = results.compactMap { result -> String? in
                 if let identifier = result.assetIdentifier {
                     print("✅ Found valid assetIdentifier: \(identifier)")
                     return identifier
                 } else {
-                    print("⚠️ Skipping item without assetIdentifier - will not create copy")
+                    print("⚠️ Skipping item without assetIdentifier - this happens with iCloud photos not fully downloaded")
                     return nil
                 }
             }
             
             guard !validResults.isEmpty else {
-                print("❌ No photos with valid identifiers - cannot reference without copying")
+                print("❌ No photos with valid identifiers - cannot reference photos not fully downloaded")
                 self.parent.onDismiss()
                 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -96,91 +96,6 @@ struct MediaLibraryPicker: UIViewControllerRepresentable {
                 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     self.showFetchFailedAlert()
-                }
-            }
-        }
-        
-        private func processItemsAsImages(_ results: [PHPickerResult], completion: @escaping ([PHAsset]) -> Void) {
-            print("📸 Processing \(results.count) items as images...")
-            
-            let group = DispatchGroup()
-            var processedAssets: [PHAsset] = []
-            let assetsLock = NSLock() // Thread safety for the array
-            
-            for (index, result) in results.enumerated() {
-                group.enter()
-                
-                print("📸 Processing item \(index)...")
-                
-                if result.itemProvider.canLoadObject(ofClass: UIImage.self) {
-                    result.itemProvider.loadObject(ofClass: UIImage.self) { object, error in
-                        if let image = object as? UIImage {
-                            print("✅ Loaded UIImage for item \(index), saving to library...")
-                            self.saveImageToLibrary(image) { asset in
-                                if let asset = asset {
-                                    assetsLock.lock()
-                                    processedAssets.append(asset)
-                                    assetsLock.unlock()
-                                    print("✅ Saved and got PHAsset for item \(index)")
-                                } else {
-                                    print("❌ Failed to save item \(index)")
-                                }
-                                group.leave() // Leave AFTER save operation completes
-                            }
-                        } else {
-                            print("❌ Failed to load UIImage for item \(index): \(error?.localizedDescription ?? "Unknown error")")
-                            group.leave()
-                        }
-                    }
-                } else {
-                    print("❌ Item \(index) cannot be loaded as UIImage")
-                    group.leave()
-                }
-            }
-            
-            group.notify(queue: .main) {
-                print("📸 Finished processing all items. Got \(processedAssets.count) assets")
-                completion(processedAssets)
-            }
-        }
-        
-        private func saveImageToLibrary(_ image: UIImage, completion: @escaping (PHAsset?) -> Void) {
-            // Use PhotoManager if available to save to Nice Places album
-            if let photoManager = self.photoManager {
-                print("📸 Using PhotoManager to save to Nice Places album...")
-                photoManager.saveImage(image) { identifier in
-                    if let identifier = identifier {
-                        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil)
-                        DispatchQueue.main.async {
-                            completion(fetchResult.firstObject)
-                        }
-                    } else {
-                        print("❌ PhotoManager failed to save image")
-                        DispatchQueue.main.async {
-                            completion(nil)
-                        }
-                    }
-                }
-            } else {
-                // Fallback to direct library save
-                print("📸 Saving directly to photo library...")
-                var assetIdentifier: String?
-                
-                PHPhotoLibrary.shared().performChanges({
-                    let creationRequest = PHAssetChangeRequest.creationRequestForAsset(from: image)
-                    assetIdentifier = creationRequest.placeholderForCreatedAsset?.localIdentifier
-                }) { success, error in
-                    if success, let identifier = assetIdentifier {
-                        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil)
-                        DispatchQueue.main.async {
-                            completion(fetchResult.firstObject)
-                        }
-                    } else {
-                        print("❌ Failed to save image: \(error?.localizedDescription ?? "Unknown error")")
-                        DispatchQueue.main.async {
-                            completion(nil)
-                        }
-                    }
                 }
             }
         }

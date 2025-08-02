@@ -36,31 +36,94 @@ struct LocationDetailView: View {
                 
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 24) {
-                        // Header Section
+                        // Header Section with Integrated Actions
                         VStack(spacing: 16) {
-                            // Location Icon and Address
-                            VStack(spacing: 12) {
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [Color.spotifyGreen, Color.spotifyGreen.opacity(0.7)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 80, height: 80)
-                                    .overlay(
-                                        Image(systemName: "location.fill")
-                                            .font(.system(size: 40))
-                                            .foregroundColor(.black)
-                                    )
+                            // Location Icon, Header Text, and Action Buttons
+                            VStack(spacing: 16) {
+                                // Main header with icon, text and actions
+                                HStack {
+                                    Image(systemName: "location.circle.fill")
+                                        .font(.title)
+                                        .foregroundColor(.spotifyGreen)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Saved Location")
+                                            .font(.headline)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.white)
+                                        
+                                        Text("Tap to view details")
+                                            .font(.caption)
+                                            .foregroundColor(.spotifyTextGray)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    // Integrated Action Buttons - Single Line
+                                    HStack(spacing: 8) {
+                                        // Take Photos Button
+                                        Button(action: { showingCamera = true }) {
+                                            Image(systemName: "camera.fill")
+                                                .font(.headline)
+                                                .foregroundColor(.white)
+                                                .frame(width: 36, height: 36)
+                                                .background(
+                                                    Circle()
+                                                        .fill(Color.spotifyGreen.opacity(0.8))
+                                                )
+                                        }
+                                        .buttonStyle(.plain)
+                                        
+                                        // Add from Library Button
+                                        Button(action: { showingMediaLibrary = true }) {
+                                            Image(systemName: "photo.on.rectangle.angled")
+                                                .font(.headline)
+                                                .foregroundColor(.white)
+                                                .frame(width: 36, height: 36)
+                                                .background(
+                                                    Circle()
+                                                        .fill(Color.spotifyGreen.opacity(0.8))
+                                                )
+                                        }
+                                        .buttonStyle(.plain)
+                                        
+                                        // Share Location Button
+                                        Button(action: { shareLocation() }) {
+                                            Image(systemName: "location.fill.viewfinder")
+                                                .font(.headline)
+                                                .foregroundColor(.white)
+                                                .frame(width: 36, height: 36)
+                                                .background(
+                                                    Circle()
+                                                        .fill(Color.spotifyGreen.opacity(0.8))
+                                                )
+                                        }
+                                        .buttonStyle(.plain)
+                                        
+                                        // View on Map Button
+                                        Button(action: { showingMapView = true }) {
+                                            Image(systemName: "map.fill")
+                                                .font(.headline)
+                                                .foregroundColor(.white)
+                                                .frame(width: 36, height: 36)
+                                                .background(
+                                                    Circle()
+                                                        .fill(Color.spotifyGreen.opacity(0.8))
+                                                )
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
                                 
+                                // Address
                                 Text(location.address)
-                                    .font(.title2)
-                                    .fontWeight(.bold)
+                                    .font(.title3)
+                                    .fontWeight(.medium)
                                     .foregroundColor(.white)
-                                    .multilineTextAlignment(.center)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                     .lineLimit(3)
+                                    .minimumScaleFactor(0.8)
                             }
                             .padding(.horizontal, 24)
                             
@@ -141,195 +204,26 @@ struct LocationDetailView: View {
                             .padding(.horizontal, 24)
                         }
                         
-                        // Action Buttons
-                        VStack(spacing: 12) {
-                            // NEW: Add Photos Section with Two Options
-                            VStack(spacing: 8) {
-                                // Camera Button
-                                Button(action: { showingCamera = true }) {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: "camera.fill")
-                                            .font(.title2)
-                                        
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text("Take Photos & Videos")
-                                                .font(.headline)
-                                                .fontWeight(.semibold)
-                                            
-                                            Text("Capture new content with your camera")
-                                                .font(.caption)
-                                                .opacity(0.8)
-                                        }
-                                        
-                                        Spacer()
-                                    }
-                                    .foregroundColor(.black)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.horizontal, 24)
-                                    .padding(.vertical, 16)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .fill(Color.spotifyGreen)
-                                    )
-                                }
-                                .padding(.horizontal, 24)
+                        // Edit Location Button (kept as standalone)
+                        Button(action: { showingEditSheet = true }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "pencil")
+                                    .font(.title2)
                                 
-                                // NEW: Add from Library Button
-                                Button(action: { showingMediaLibrary = true }) {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: "photo.on.rectangle.angled")
-                                            .font(.title2)
-                                        
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text("Add from Library")
-                                                .font(.headline)
-                                                .fontWeight(.semibold)
-                                            
-                                            Text("Choose existing photos and videos")
-                                                .font(.caption)
-                                                .opacity(0.8)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        Image(systemName: "plus.circle")
-                                            .font(.subheadline)
-                                            .opacity(0.7)
-                                    }
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.horizontal, 24)
-                                    .padding(.vertical, 16)
-                                    .background(
-                                        LinearGradient(
-                                            colors: [
-                                                Color.spotifyMediumGray,
-                                                Color.spotifyMediumGray.opacity(0.8)
-                                            ],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    )
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .stroke(Color.spotifyGreen.opacity(0.3), lineWidth: 1)
-                                    )
-                                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                                }
-                                .padding(.horizontal, 24)
+                                Text("Edit Location")
+                                    .font(.headline)
+                                    .fontWeight(.medium)
                             }
-                            
-                            // Share Location Button
-                            Button(action: {
-                                shareLocation()
-                            }) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "location.fill.viewfinder")
-                                        .font(.title2)
-                                    
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Share This Location")
-                                            .font(.headline)
-                                            .fontWeight(.semibold)
-                                        
-                                        Text("Send this saved location to others")
-                                            .font(.caption)
-                                            .opacity(0.8)
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    Image(systemName: "square.and.arrow.up")
-                                        .font(.subheadline)
-                                        .opacity(0.7)
-                                }
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 16)
-                                .background(
-                                    LinearGradient(
-                                        colors: [
-                                            Color.spotifyGreen.opacity(0.8),
-                                            Color.spotifyGreen.opacity(0.6)
-                                        ],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.spotifyGreen, lineWidth: 1)
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
                             .padding(.horizontal, 24)
-                            
-                            // View on Map Button
-                            Button(action: { showingMapView = true }) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "map.fill")
-                                        .font(.title2)
-                                    
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("View on Map")
-                                            .font(.headline)
-                                            .fontWeight(.semibold)
-                                        
-                                        Text("See 500m radius around location")
-                                            .font(.caption)
-                                            .opacity(0.8)
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    Image(systemName: "arrow.up.right")
-                                        .font(.subheadline)
-                                        .opacity(0.7)
-                                }
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 16)
-                                .background(
-                                    LinearGradient(
-                                        colors: [
-                                            Color.spotifyMediumGray,
-                                            Color.spotifyMediumGray.opacity(0.8)
-                                        ],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.spotifyGreen.opacity(0.3), lineWidth: 1)
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                            }
-                            .padding(.horizontal, 24)
-                            
-                            // Edit Button
-                            Button(action: { showingEditSheet = true }) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "pencil")
-                                        .font(.title2)
-                                    
-                                    Text("Edit Location")
-                                        .font(.headline)
-                                        .fontWeight(.medium)
-                                }
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.spotifyMediumGray)
-                                )
-                            }
-                            .padding(.horizontal, 24)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.spotifyMediumGray)
+                            )
                         }
+                        .padding(.horizontal, 24)
                         
                         // Photo Gallery Section
                         if !location.photoIdentifiers.isEmpty {
@@ -369,7 +263,7 @@ struct LocationDetailView: View {
                                     .fontWeight(.medium)
                                     .foregroundColor(.spotifyTextGray)
                                 
-                                Text("Add your first photos to this location")
+                                Text("Use the camera or library buttons above to add photos")
                                     .font(.subheadline)
                                     .foregroundColor(.spotifyTextGray.opacity(0.8))
                                     .multilineTextAlignment(.center)

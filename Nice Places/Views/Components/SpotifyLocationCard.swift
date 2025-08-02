@@ -10,6 +10,11 @@ struct SpotifyLocationCard: View {
     let altitude: Double?
     let isUpdating: Bool
     
+    // NEW: Action handlers
+    let onViewMap: () -> Void
+    let onSharePosition: () -> Void
+    let onCapturePhoto: () -> Void
+    
     var body: some View {
         VStack(spacing: 0) {
             // Header with gradient
@@ -31,6 +36,50 @@ struct SpotifyLocationCard: View {
                     }
                     
                     Spacer()
+                    
+                    // NEW: Action buttons integrated into the card
+                    if coordinate != nil {
+                        HStack(spacing: 8) {
+                            // Capture Photo Button
+                            Button(action: onCapturePhoto) {
+                                Image(systemName: "camera.fill")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .frame(width: 36, height: 36)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.spotifyGreen.opacity(0.8))
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            
+                            // Share Position Button
+                            Button(action: onSharePosition) {
+                                Image(systemName: "location.fill.viewfinder")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .frame(width: 36, height: 36)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.spotifyGreen.opacity(0.8))
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            
+                            // View Map Button
+                            Button(action: onViewMap) {
+                                Image(systemName: "map.fill")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .frame(width: 36, height: 36)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.spotifyGreen.opacity(0.8))
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
                 
                 // Address Display
@@ -121,7 +170,10 @@ struct SpotifyLocationCard: View {
         address: "123 Main Street, Cupertino, CA 95014",
         coordinate: CLLocationCoordinate2D(latitude: 37.3349, longitude: -122.0090),
         altitude: 56.7,
-        isUpdating: true
+        isUpdating: true,
+        onViewMap: {},
+        onSharePosition: {},
+        onCapturePhoto: {}
     )
     .preferredColorScheme(.dark)
 }
