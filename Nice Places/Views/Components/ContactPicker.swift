@@ -67,9 +67,11 @@ struct ContactPicker: UIViewControllerRepresentable {
             phoneNumber = cleanPhoneNumber(phoneNumber)
             print("📞 ContactPicker: Cleaned phone number: '\(phoneNumber)'")
             
-            // Call the callback immediately - don't call onDismiss here
-            print("📞 ContactPicker: Calling callback with name: '\(contactName)', phone: '\(phoneNumber)'")
-            self.parent.onContactSelected(contactName, phoneNumber)
+            // Call the callback with a slight delay to ensure picker dismisses cleanly
+                   DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                       print("📞 ContactPicker: Calling callback with name: '\(contactName)', phone: '\(phoneNumber)'")
+                       self.parent.onContactSelected(contactName, phoneNumber)
+                   }
         }
         
         func contactPickerDidCancel(_ picker: CNContactPickerViewController) {
