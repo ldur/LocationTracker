@@ -10,17 +10,18 @@ struct ProfileView: View {
     @State private var name: String = ""
     @State private var email: String = ""
     @State private var mobile: String = ""
-    @State private var emergencyContactName: String = "" // NEW
-    @State private var emergencyContactMobile: String = "" // NEW
+    @State private var emergencyContactName: String = ""
+    @State private var emergencyContactMobile: String = ""
     @State private var showingClearAlert = false
     @State private var hasChanges = false
-    @State private var showingContactPicker = false // NEW: Contact picker state
-    @State private var showingContactPermission = false // NEW: Permission sheet state
+    @State private var showingContactPicker = false
+    @State private var showingContactPermission = false
+    @State private var isProcessingContact = false // NEW: To prevent unwanted dismissals
     
     @FocusState private var focusedField: Field?
     
     enum Field {
-        case name, email, mobile, emergencyContactName, emergencyContactMobile // NEW: Added emergency contact fields
+        case name, email, mobile, emergencyContactName, emergencyContactMobile
     }
     
     var body: some View {
@@ -264,7 +265,7 @@ struct ProfileView: View {
                                 }
                             }
                             
-                            // NEW: Emergency Contact Section
+                            // Emergency Contact Section
                             VStack(spacing: 24) {
                                 // Section Header with Contact Picker Button
                                 HStack {
@@ -498,7 +499,6 @@ struct ProfileView: View {
                                                 .foregroundColor(.spotifyTextGray)
                                         }
                                         
-                                        // NEW: Emergency contact benefit
                                         if isValidEmergencyContact() {
                                             HStack(spacing: 8) {
                                                 Image(systemName: "phone.fill")
@@ -574,7 +574,9 @@ struct ProfileView: View {
             loadProfileData()
         }
         .onDisappear {
-            print("📞 ProfileView: View disappeared")
+            if !isProcessingContact {
+                print("📞 ProfileView: View disappeared (not during contact processing)")
+            }
         }
         .alert("Clear Profile", isPresented: $showingClearAlert) {
             Button("Cancel", role: .cancel) {}
@@ -584,46 +586,55 @@ struct ProfileView: View {
         } message: {
             Text("Are you sure you want to clear your profile? This action cannot be undone.")
         }
-        // NEW: Contact picker sheets
+        // Contact picker sheets with improved state management
         .sheet(isPresented: $showingContactPermission) {
             ContactPermissionSheet(
                 onPermissionGranted: {
                     print("📞 ProfileView: Contact permission granted")
                     showingContactPermission = false
-                    // Add delay before showing picker
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    // Add delay before showing picker to prevent conflicts
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                         self.showingContactPicker = true
                     }
                 },
                 onDismiss: {
                     print("📞 ProfileView: Contact permission dismissed")
                     showingContactPermission = false
+                    isProcessingContact = false // Clear processing state if permission denied
                 }
             )
         }
-        .sheet(isPresented: $showingContactPicker) {
+        .fullScreenCover(isPresented: $showingContactPicker) {
             ContactPicker(
                 onContactSelected: { name, phoneNumber in
                     print("📞 ProfileView: Contact callback received - Name: '\(name)', Phone: '\(phoneNumber)'")
                     
-                    // Update the state immediately on main thread
-                    self.emergencyContactName = name
-                    self.emergencyContactMobile = phoneNumber
-                    self.hasChanges = true
+                    // Set processing state to prevent unwanted dismissals
+                    isProcessingContact = true
                     
-                    print("📞 ProfileView: Emergency contact fields updated")
-                    print("📞 ProfileView: emergencyContactName = '\(self.emergencyContactName)'")
-                    print("📞 ProfileView: emergencyContactMobile = '\(self.emergencyContactMobile)'")
+                    // First dismiss the contact picker
+                    showingContactPicker = false
                     
-                    // Dismiss the contact picker
-                    self.showingContactPicker = false
+                    // Small delay to ensure picker is fully dismissed before updating state
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        self.emergencyContactName = name
+                        self.emergencyContactMobile = phoneNumber
+                        self.hasChanges = true
+                        
+                        print("📞 ProfileView: Emergency contact fields updated")
+                        print("📞 ProfileView: emergencyContactName = '\(self.emergencyContactName)'")
+                        print("📞 ProfileView: emergencyContactMobile = '\(self.emergencyContactMobile)'")
+                        
+                        // Clear processing state
+                        self.isProcessingContact = false
+                    }
                 },
                 onDismiss: {
                     print("📞 ProfileView: Contact picker dismissed without selection")
-                    self.showingContactPicker = false
+                    showingContactPicker = false
+                    isProcessingContact = false
                 }
             )
-            .interactiveDismissDisabled(false) // Allow swipe to dismiss
         }
         
         // Floating Save Button
@@ -673,17 +684,20 @@ struct ProfileView: View {
         print("📞 ProfileView: Loaded emergency contact - Name: '\(emergencyContactName)', Mobile: '\(emergencyContactMobile)'")
     }
     
-    // NEW: Contact picker functionality
+    // Contact picker functionality with improved timing
     private func selectFromContacts() {
         // Dismiss keyboard first to prevent constraint conflicts
         focusedField = nil
+        
+        // Set processing state
+        isProcessingContact = true
         
         let contactsPermission = ContactPermissionHelper.checkContactsPermission()
         
         switch contactsPermission {
         case .authorized:
-            // Add small delay to ensure keyboard is dismissed
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            // Add delay to ensure keyboard is dismissed and no view conflicts
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self.showingContactPicker = true
             }
         case .notDetermined, .denied, .restricted:
@@ -743,7 +757,6 @@ struct ProfileView: View {
         return cleaned.count >= 10 && cleaned.allSatisfy { $0.isNumber || $0 == "+" || $0 == "-" || $0 == " " || $0 == "(" || $0 == ")" }
     }
     
-    // NEW: Emergency contact validation methods
     private func isValidEmergencyContactName(_ name: String) -> Bool {
         return !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }

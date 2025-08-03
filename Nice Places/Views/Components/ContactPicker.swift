@@ -33,12 +33,19 @@ struct ContactPicker: UIViewControllerRepresentable {
     
     class Coordinator: NSObject, CNContactPickerDelegate {
         let parent: ContactPicker
+        private var hasCompleted = false // Prevent multiple callbacks
         
         init(_ parent: ContactPicker) {
             self.parent = parent
         }
         
         func contactPicker(_ picker: CNContactPickerViewController, didSelect contact: CNContact) {
+            guard !hasCompleted else {
+                print("📞 ContactPicker: Already completed, ignoring duplicate callback")
+                return
+            }
+            
+            hasCompleted = true
             print("📞 ContactPicker: Contact selected")
             
             // Extract contact name
@@ -67,16 +74,26 @@ struct ContactPicker: UIViewControllerRepresentable {
             phoneNumber = cleanPhoneNumber(phoneNumber)
             print("📞 ContactPicker: Cleaned phone number: '\(phoneNumber)'")
             
-            // Call the callback with a slight delay to ensure picker dismisses cleanly
-                   DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                       print("📞 ContactPicker: Calling callback with name: '\(contactName)', phone: '\(phoneNumber)'")
-                       self.parent.onContactSelected(contactName, phoneNumber)
-                   }
+            // Store the callback data
+            let finalName = contactName
+            let finalPhone = phoneNumber
+            
+            // Let the picker dismiss naturally first, then call our callback
+            // This prevents the CFMessagePort error by not competing with system dismissal
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                print("📞 ContactPicker: Executing delayed callback with name: '\(finalName)', phone: '\(finalPhone)'")
+                self.parent.onContactSelected(finalName, finalPhone)
+            }
         }
         
         func contactPickerDidCancel(_ picker: CNContactPickerViewController) {
+            guard !hasCompleted else { return }
+            hasCompleted = true
+            
             print("📞 ContactPicker: User cancelled contact selection")
-            DispatchQueue.main.async {
+            
+            // Small delay to prevent conflicts with system dismissal
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 self.parent.onDismiss()
             }
         }
@@ -117,7 +134,7 @@ struct ContactPermissionHelper {
             let granted = try await store.requestAccess(for: .contacts)
             return granted
         } catch {
-            print("Contact permission error: \(error)")
+            print("📞 ContactPermissionHelper: Error requesting permission: \(error)")
             return false
         }
     }
@@ -211,7 +228,7 @@ struct ContactPermissionSheet: View {
     private func requestContactsPermission() {
         Task {
             let granted = await ContactPermissionHelper.requestContactsPermission()
-            DispatchQueue.main.async {
+            await MainActor.run {
                 if granted {
                     onPermissionGranted()
                 } else {

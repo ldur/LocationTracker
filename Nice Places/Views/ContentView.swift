@@ -323,10 +323,9 @@ struct ContentView: View {
                     )
                 }
             }
-            .sheet(isPresented: $showingProfileView) {
-                // NEW: Profile view
+            .fullScreenCover(isPresented: $showingProfileView) {
+                // Changed to fullScreenCover for better stability
                 ProfileView(profileManager: profileManager)
-                    .interactiveDismissDisabled(false) // Allow swipe to dismiss but prevent accidental dismissal
             }
             .onChange(of: showingProfileView) { _, newValue in
                 print("📞 ContentView: ProfileView sheet state changed to: \(newValue)")
