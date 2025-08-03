@@ -16,8 +16,8 @@ class ProfileManager {
     }
     
     // MARK: - Profile Management
-    func updateProfile(name: String, email: String, mobile: String) {
-        userProfile.update(name: name, email: email, mobile: mobile)
+    func updateProfile(name: String, email: String, mobile: String, emergencyContactName: String = "", emergencyContactMobile: String = "") {
+        userProfile.update(name: name, email: email, mobile: mobile, emergencyContactName: emergencyContactName, emergencyContactMobile: emergencyContactMobile)
         saveProfile()
     }
     
@@ -79,5 +79,22 @@ class ProfileManager {
     
     func isProfileSetup() -> Bool {
         return userProfile.isSetup
+    }
+    
+    // NEW: Emergency contact methods
+    func hasEmergencyContact() -> Bool {
+        return userProfile.hasEmergencyContact
+    }
+    
+    func getEmergencyContactName() -> String {
+        return userProfile.emergencyContactName
+    }
+    
+    func getEmergencyContactMobile() -> String {
+        return userProfile.emergencyContactMobile
+    }
+    
+    func isCompleteWithEmergencyContact() -> Bool {
+        return userProfile.isCompleteWithEmergencyContact
     }
 }

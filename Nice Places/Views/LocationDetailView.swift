@@ -354,13 +354,20 @@ struct LocationDetailView: View {
     
     // MARK: - Helper Functions
     private func formatCoordinates(_ coordinate: CLLocationCoordinate2D) -> String {
-        let lat = coordinate.latitude.isNaN ? "---.----" : String(format: "%.4f", coordinate.latitude)
-        let lng = coordinate.longitude.isNaN ? "---.----" : String(format: "%.4f", coordinate.longitude)
+        guard coordinate.latitude.isFinite && !coordinate.latitude.isNaN &&
+              coordinate.longitude.isFinite && !coordinate.longitude.isNaN else {
+            return "---.----, ---.----"
+        }
+        let lat = String(format: "%.4f", coordinate.latitude)
+        let lng = String(format: "%.4f", coordinate.longitude)
         return "\(lat), \(lng)"
     }
     
     private func formatAltitude(_ altitude: Double) -> String {
-        return altitude.isNaN ? "--- m" : String(format: "%.1f m", altitude)
+        guard altitude.isFinite && !altitude.isNaN else {
+            return "--- m"
+        }
+        return String(format: "%.1f m", altitude)
     }
     
     private func addPhotoToLocation(_ identifier: String) {

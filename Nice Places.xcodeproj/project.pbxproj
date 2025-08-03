@@ -435,6 +435,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
 				INFOPLIST_KEY_NSCameraUsageDescription = "LocationTracker needs camera access to capture photos and videos of your special places.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "LocationTracker uses your location to provide accurate address information and altitude data";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "LocationTracker needs access to your location to show your current address and save location data.";
@@ -478,6 +479,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
 				INFOPLIST_KEY_NSCameraUsageDescription = "LocationTracker needs camera access to capture photos and videos of your special places.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "LocationTracker uses your location to provide accurate address information and altitude data";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "LocationTracker needs access to your location to show your current address and save location data.";

@@ -112,7 +112,7 @@ struct SpotifyLocationCard: View {
                         .fontWeight(.medium)
                         .foregroundColor(.spotifyTextGray)
                     
-                    Text(coordinate?.latitude != nil && !coordinate!.latitude.isNaN ? String(format: "%.6f", coordinate!.latitude) : "---.------")
+                    Text(formatCoordinate(coordinate?.latitude))
                         .font(.footnote)
                         .fontWeight(.medium)
                         .foregroundColor(.white)
@@ -130,7 +130,7 @@ struct SpotifyLocationCard: View {
                         .fontWeight(.medium)
                         .foregroundColor(.spotifyTextGray)
                     
-                    Text(coordinate?.longitude != nil && !coordinate!.longitude.isNaN ? String(format: "%.6f", coordinate!.longitude) : "---.------")
+                    Text(formatCoordinate(coordinate?.longitude))
                         .font(.footnote)
                         .fontWeight(.medium)
                         .foregroundColor(.white)
@@ -148,7 +148,7 @@ struct SpotifyLocationCard: View {
                         .fontWeight(.medium)
                         .foregroundColor(.spotifyTextGray)
                     
-                    Text(altitude != nil && !altitude!.isNaN ? String(format: "%.1f m", altitude!) : "--- m")
+                    Text(formatAltitude(altitude))
                         .font(.footnote)
                         .fontWeight(.medium)
                         .foregroundColor(.white)
@@ -162,6 +162,23 @@ struct SpotifyLocationCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
         .padding(.horizontal, 24)
+    }
+    
+    // MARK: - Helper Functions for Safe Number Formatting
+    private func formatCoordinate(_ coordinate: Double?) -> String {
+        guard let coordinate = coordinate,
+              coordinate.isFinite && !coordinate.isNaN else {
+            return "---.------"
+        }
+        return String(format: "%.6f", coordinate)
+    }
+    
+    private func formatAltitude(_ altitude: Double?) -> String {
+        guard let altitude = altitude,
+              altitude.isFinite && !altitude.isNaN else {
+            return "--- m"
+        }
+        return String(format: "%.1f m", altitude)
     }
 }
 

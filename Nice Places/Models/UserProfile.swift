@@ -6,14 +6,18 @@ struct UserProfile: Codable, Equatable {
     var name: String
     var email: String
     var mobile: String
+    var emergencyContactName: String // NEW: Emergency contact name
+    var emergencyContactMobile: String // NEW: Emergency contact mobile
     var isSetup: Bool
     let createdDate: Date
     var lastUpdated: Date
     
-    init(name: String = "", email: String = "", mobile: String = "") {
+    init(name: String = "", email: String = "", mobile: String = "", emergencyContactName: String = "", emergencyContactMobile: String = "") {
         self.name = name
         self.email = email
         self.mobile = mobile
+        self.emergencyContactName = emergencyContactName
+        self.emergencyContactMobile = emergencyContactMobile
         self.isSetup = !name.isEmpty
         self.createdDate = Date()
         self.lastUpdated = Date()
@@ -35,8 +39,27 @@ struct UserProfile: Codable, Equatable {
         return cleaned.count >= 10 && cleaned.allSatisfy { $0.isNumber || $0 == "+" || $0 == "-" || $0 == " " || $0 == "(" || $0 == ")" }
     }
     
+    // NEW: Emergency contact validation
+    var hasValidEmergencyContactName: Bool {
+        return !emergencyContactName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    
+    var hasValidEmergencyContactMobile: Bool {
+        let cleaned = emergencyContactMobile.trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.count >= 10 && cleaned.allSatisfy { $0.isNumber || $0 == "+" || $0 == "-" || $0 == " " || $0 == "(" || $0 == ")" }
+    }
+    
+    var hasEmergencyContact: Bool {
+        return hasValidEmergencyContactName && hasValidEmergencyContactMobile
+    }
+    
     var isComplete: Bool {
         return hasValidName && hasValidEmail && hasValidMobile
+    }
+    
+    // NEW: Check if profile is complete including emergency contact
+    var isCompleteWithEmergencyContact: Bool {
+        return isComplete && hasEmergencyContact
     }
     
     var displayName: String {
@@ -44,10 +67,12 @@ struct UserProfile: Codable, Equatable {
     }
     
     // Update profile data
-    mutating func update(name: String, email: String, mobile: String) {
+    mutating func update(name: String, email: String, mobile: String, emergencyContactName: String = "", emergencyContactMobile: String = "") {
         self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         self.email = email.trimmingCharacters(in: .whitespacesAndNewlines)
         self.mobile = mobile.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.emergencyContactName = emergencyContactName.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.emergencyContactMobile = emergencyContactMobile.trimmingCharacters(in: .whitespacesAndNewlines)
         self.isSetup = hasValidName
         self.lastUpdated = Date()
     }

@@ -1,6 +1,7 @@
 // /Views/Profile/ProfileView.swift
 
 import SwiftUI
+import Contacts
 
 struct ProfileView: View {
     @Bindable var profileManager: ProfileManager
@@ -9,13 +10,17 @@ struct ProfileView: View {
     @State private var name: String = ""
     @State private var email: String = ""
     @State private var mobile: String = ""
+    @State private var emergencyContactName: String = "" // NEW
+    @State private var emergencyContactMobile: String = "" // NEW
     @State private var showingClearAlert = false
     @State private var hasChanges = false
+    @State private var showingContactPicker = false // NEW: Contact picker state
+    @State private var showingContactPermission = false // NEW: Permission sheet state
     
     @FocusState private var focusedField: Field?
     
     enum Field {
-        case name, email, mobile
+        case name, email, mobile, emergencyContactName, emergencyContactMobile // NEW: Added emergency contact fields
     }
     
     var body: some View {
@@ -83,161 +88,348 @@ struct ProfileView: View {
                         .padding(.top, 20)
                         
                         // Form Section
-                        VStack(spacing: 24) {
-                            // Name Field
-                            VStack(alignment: .leading, spacing: 8) {
+                        VStack(spacing: 32) {
+                            // Personal Information Section
+                            VStack(spacing: 24) {
+                                // Section Header
                                 HStack {
-                                    Text("Full Name")
-                                        .font(.headline)
-                                        .fontWeight(.medium)
+                                    Text("Personal Information")
+                                        .font(.title3)
+                                        .fontWeight(.bold)
                                         .foregroundColor(.white)
-                                    
-                                    Text("*")
-                                        .foregroundColor(.red)
                                     
                                     Spacer()
                                     
-                                    if !name.isEmpty && !isValidName(name) {
-                                        Image(systemName: "exclamationmark.circle.fill")
-                                            .font(.caption)
-                                            .foregroundColor(.red)
-                                    } else if !name.isEmpty && isValidName(name) {
+                                    if isValidPersonalInfo() {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .font(.caption)
+                                            .font(.subheadline)
                                             .foregroundColor(.spotifyGreen)
                                     }
                                 }
                                 
-                                TextField("Your full name", text: $name)
-                                    .textFieldStyle(.plain)
-                                    .font(.body)
-                                    .foregroundColor(.white)
-                                    .padding(16)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.spotifyLightGray)
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 12)
-                                                    .stroke(
-                                                        focusedField == .name ? Color.spotifyGreen : Color.clear,
-                                                        lineWidth: 1
-                                                    )
-                                            )
-                                    )
-                                    .focused($focusedField, equals: .name)
-                                    .textContentType(.name)
-                                    .submitLabel(.next)
-                                    .onSubmit {
-                                        focusedField = .email
+                                // Name Field
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text("Full Name")
+                                            .font(.headline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.white)
+                                        
+                                        Text("*")
+                                            .foregroundColor(.red)
+                                        
+                                        Spacer()
+                                        
+                                        if !name.isEmpty && !isValidName(name) {
+                                            Image(systemName: "exclamationmark.circle.fill")
+                                                .font(.caption)
+                                                .foregroundColor(.red)
+                                        } else if !name.isEmpty && isValidName(name) {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .font(.caption)
+                                                .foregroundColor(.spotifyGreen)
+                                        }
                                     }
-                                    .onChange(of: name) { _, _ in
-                                        hasChanges = true
+                                    
+                                    TextField("Your full name", text: $name)
+                                        .textFieldStyle(.plain)
+                                        .font(.body)
+                                        .foregroundColor(.white)
+                                        .padding(16)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(Color.spotifyLightGray)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .stroke(
+                                                            focusedField == .name ? Color.spotifyGreen : Color.clear,
+                                                            lineWidth: 1
+                                                        )
+                                                )
+                                        )
+                                        .focused($focusedField, equals: .name)
+                                        .textContentType(.name)
+                                        .submitLabel(.next)
+                                        .onSubmit {
+                                            focusedField = .email
+                                        }
+                                        .onChange(of: name) { _, _ in
+                                            hasChanges = true
+                                        }
+                                }
+                                
+                                // Email Field
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text("Email Address")
+                                            .font(.headline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.white)
+                                        
+                                        Text("*")
+                                            .foregroundColor(.red)
+                                        
+                                        Spacer()
+                                        
+                                        if !email.isEmpty && !isValidEmail(email) {
+                                            Image(systemName: "exclamationmark.circle.fill")
+                                                .font(.caption)
+                                                .foregroundColor(.red)
+                                        } else if !email.isEmpty && isValidEmail(email) {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .font(.caption)
+                                                .foregroundColor(.spotifyGreen)
+                                        }
                                     }
+                                    
+                                    TextField("your.email@example.com", text: $email)
+                                        .textFieldStyle(.plain)
+                                        .font(.body)
+                                        .foregroundColor(.white)
+                                        .padding(16)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(Color.spotifyLightGray)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .stroke(
+                                                            focusedField == .email ? Color.spotifyGreen : Color.clear,
+                                                            lineWidth: 1
+                                                        )
+                                                )
+                                        )
+                                        .focused($focusedField, equals: .email)
+                                        .textContentType(.emailAddress)
+                                        .keyboardType(.emailAddress)
+                                        .autocapitalization(.none)
+                                        .submitLabel(.next)
+                                        .onSubmit {
+                                            focusedField = .mobile
+                                        }
+                                        .onChange(of: email) { _, _ in
+                                            hasChanges = true
+                                        }
+                                }
+                                
+                                // Mobile Field
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text("Mobile Number")
+                                            .font(.headline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.white)
+                                        
+                                        Text("*")
+                                            .foregroundColor(.red)
+                                        
+                                        Spacer()
+                                        
+                                        if !mobile.isEmpty && !isValidMobile(mobile) {
+                                            Image(systemName: "exclamationmark.circle.fill")
+                                                .font(.caption)
+                                                .foregroundColor(.red)
+                                        } else if !mobile.isEmpty && isValidMobile(mobile) {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .font(.caption)
+                                                .foregroundColor(.spotifyGreen)
+                                        }
+                                    }
+                                    
+                                    TextField("+1 234 567 8900", text: $mobile)
+                                        .textFieldStyle(.plain)
+                                        .font(.body)
+                                        .foregroundColor(.white)
+                                        .padding(16)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(Color.spotifyLightGray)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .stroke(
+                                                            focusedField == .mobile ? Color.spotifyGreen : Color.clear,
+                                                            lineWidth: 1
+                                                        )
+                                                )
+                                        )
+                                        .focused($focusedField, equals: .mobile)
+                                        .textContentType(.telephoneNumber)
+                                        .keyboardType(.phonePad)
+                                        .submitLabel(.next)
+                                        .onSubmit {
+                                            focusedField = .emergencyContactName
+                                        }
+                                        .onChange(of: mobile) { _, _ in
+                                            hasChanges = true
+                                        }
+                                }
                             }
                             
-                            // Email Field
-                            VStack(alignment: .leading, spacing: 8) {
+                            // NEW: Emergency Contact Section
+                            VStack(spacing: 24) {
+                                // Section Header with Contact Picker Button
                                 HStack {
-                                    Text("Email Address")
-                                        .font(.headline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.white)
-                                    
-                                    Text("*")
-                                        .foregroundColor(.red)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Emergency Contact")
+                                            .font(.title3)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.white)
+                                        
+                                        Text("Optional")
+                                            .font(.caption)
+                                            .foregroundColor(.spotifyTextGray)
+                                    }
                                     
                                     Spacer()
                                     
-                                    if !email.isEmpty && !isValidEmail(email) {
-                                        Image(systemName: "exclamationmark.circle.fill")
-                                            .font(.caption)
-                                            .foregroundColor(.red)
-                                    } else if !email.isEmpty && isValidEmail(email) {
+                                    // Select from Contacts Button
+                                    Button(action: selectFromContacts) {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "person.crop.circle")
+                                                .font(.caption)
+                                            Text("Select")
+                                                .font(.caption)
+                                                .fontWeight(.medium)
+                                        }
+                                        .foregroundColor(.spotifyGreen)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(
+                                            Capsule()
+                                                .fill(Color.spotifyGreen.opacity(0.2))
+                                        )
+                                    }
+                                    
+                                    if isValidEmergencyContact() {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .font(.caption)
+                                            .font(.subheadline)
                                             .foregroundColor(.spotifyGreen)
                                     }
                                 }
                                 
-                                TextField("your.email@example.com", text: $email)
-                                    .textFieldStyle(.plain)
-                                    .font(.body)
-                                    .foregroundColor(.white)
-                                    .padding(16)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.spotifyLightGray)
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 12)
-                                                    .stroke(
-                                                        focusedField == .email ? Color.spotifyGreen : Color.clear,
-                                                        lineWidth: 1
-                                                    )
-                                            )
-                                    )
-                                    .focused($focusedField, equals: .email)
-                                    .textContentType(.emailAddress)
-                                    .keyboardType(.emailAddress)
-                                    .autocapitalization(.none)
-                                    .submitLabel(.next)
-                                    .onSubmit {
-                                        focusedField = .mobile
+                                // Emergency Contact Name Field
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text("Emergency Contact Name")
+                                            .font(.headline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.white)
+                                        
+                                        Spacer()
+                                        
+                                        if !emergencyContactName.isEmpty && !isValidEmergencyContactName(emergencyContactName) {
+                                            Image(systemName: "exclamationmark.circle.fill")
+                                                .font(.caption)
+                                                .foregroundColor(.red)
+                                        } else if !emergencyContactName.isEmpty && isValidEmergencyContactName(emergencyContactName) {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .font(.caption)
+                                                .foregroundColor(.spotifyGreen)
+                                        }
                                     }
-                                    .onChange(of: email) { _, _ in
-                                        hasChanges = true
-                                    }
-                            }
-                            
-                            // Mobile Field
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Text("Mobile Number")
-                                        .font(.headline)
-                                        .fontWeight(.medium)
+                                    
+                                    TextField("Contact person's full name", text: $emergencyContactName)
+                                        .textFieldStyle(.plain)
+                                        .font(.body)
                                         .foregroundColor(.white)
-                                    
-                                    Text("*")
-                                        .foregroundColor(.red)
-                                    
-                                    Spacer()
-                                    
-                                    if !mobile.isEmpty && !isValidMobile(mobile) {
-                                        Image(systemName: "exclamationmark.circle.fill")
-                                            .font(.caption)
-                                            .foregroundColor(.red)
-                                    } else if !mobile.isEmpty && isValidMobile(mobile) {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.caption)
-                                            .foregroundColor(.spotifyGreen)
-                                    }
+                                        .padding(16)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(Color.spotifyLightGray)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .stroke(
+                                                            focusedField == .emergencyContactName ? Color.spotifyGreen : Color.clear,
+                                                            lineWidth: 1
+                                                        )
+                                                )
+                                        )
+                                        .focused($focusedField, equals: .emergencyContactName)
+                                        .textContentType(.name)
+                                        .submitLabel(.next)
+                                        .onSubmit {
+                                            focusedField = .emergencyContactMobile
+                                        }
+                                        .onChange(of: emergencyContactName) { _, newValue in
+                                            print("📞 ProfileView: Emergency contact name changed to: '\(newValue)'")
+                                            hasChanges = true
+                                        }
                                 }
                                 
-                                TextField("+1 234 567 8900", text: $mobile)
-                                    .textFieldStyle(.plain)
-                                    .font(.body)
-                                    .foregroundColor(.white)
-                                    .padding(16)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.spotifyLightGray)
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 12)
-                                                    .stroke(
-                                                        focusedField == .mobile ? Color.spotifyGreen : Color.clear,
-                                                        lineWidth: 1
-                                                    )
-                                            )
-                                    )
-                                    .focused($focusedField, equals: .mobile)
-                                    .textContentType(.telephoneNumber)
-                                    .keyboardType(.phonePad)
-                                    .submitLabel(.done)
-                                    .onSubmit {
-                                        focusedField = nil
+                                // Emergency Contact Mobile Field
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text("Emergency Contact Mobile")
+                                            .font(.headline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.white)
+                                        
+                                        Spacer()
+                                        
+                                        if !emergencyContactMobile.isEmpty && !isValidEmergencyContactMobile(emergencyContactMobile) {
+                                            Image(systemName: "exclamationmark.circle.fill")
+                                                .font(.caption)
+                                                .foregroundColor(.red)
+                                        } else if !emergencyContactMobile.isEmpty && isValidEmergencyContactMobile(emergencyContactMobile) {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .font(.caption)
+                                                .foregroundColor(.spotifyGreen)
+                                        }
                                     }
-                                    .onChange(of: mobile) { _, _ in
-                                        hasChanges = true
+                                    
+                                    TextField("+1 234 567 8900", text: $emergencyContactMobile)
+                                        .textFieldStyle(.plain)
+                                        .font(.body)
+                                        .foregroundColor(.white)
+                                        .padding(16)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(Color.spotifyLightGray)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .stroke(
+                                                            focusedField == .emergencyContactMobile ? Color.spotifyGreen : Color.clear,
+                                                            lineWidth: 1
+                                                        )
+                                                )
+                                        )
+                                        .focused($focusedField, equals: .emergencyContactMobile)
+                                        .textContentType(.telephoneNumber)
+                                        .keyboardType(.phonePad)
+                                        .submitLabel(.done)
+                                        .onSubmit {
+                                            focusedField = nil
+                                        }
+                                        .onChange(of: emergencyContactMobile) { _, newValue in
+                                            print("📞 ProfileView: Emergency contact mobile changed to: '\(newValue)'")
+                                            hasChanges = true
+                                        }
+                                }
+                                
+                                // Emergency Contact Info
+                                VStack(spacing: 8) {
+                                    HStack {
+                                        Image(systemName: "info.circle")
+                                            .font(.caption)
+                                            .foregroundColor(.blue)
+                                        
+                                        Text("About Emergency Contact")
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.blue)
+                                        
+                                        Spacer()
                                     }
+                                    
+                                    Text("This contact information may be used in emergency situations when sharing locations or in case of safety concerns. It's optional but recommended for safety.")
+                                        .font(.caption)
+                                        .foregroundColor(.spotifyTextGray)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .padding(12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.blue.opacity(0.1))
+                                )
                             }
                             
                             // Profile Status Card
@@ -305,6 +497,18 @@ struct ProfileView: View {
                                                 .font(.caption)
                                                 .foregroundColor(.spotifyTextGray)
                                         }
+                                        
+                                        // NEW: Emergency contact benefit
+                                        if isValidEmergencyContact() {
+                                            HStack(spacing: 8) {
+                                                Image(systemName: "phone.fill")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.spotifyGreen)
+                                                Text("Emergency contact ready for safety features")
+                                                    .font(.caption)
+                                                    .foregroundColor(.spotifyTextGray)
+                                            }
+                                        }
                                     }
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -366,7 +570,11 @@ struct ProfileView: View {
             .toolbarBackground(.thinMaterial, for: .navigationBar)
         }
         .onAppear {
+            print("📞 ProfileView: View appeared")
             loadProfileData()
+        }
+        .onDisappear {
+            print("📞 ProfileView: View disappeared")
         }
         .alert("Clear Profile", isPresented: $showingClearAlert) {
             Button("Cancel", role: .cancel) {}
@@ -375,6 +583,47 @@ struct ProfileView: View {
             }
         } message: {
             Text("Are you sure you want to clear your profile? This action cannot be undone.")
+        }
+        // NEW: Contact picker sheets
+        .sheet(isPresented: $showingContactPermission) {
+            ContactPermissionSheet(
+                onPermissionGranted: {
+                    print("📞 ProfileView: Contact permission granted")
+                    showingContactPermission = false
+                    // Add delay before showing picker
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self.showingContactPicker = true
+                    }
+                },
+                onDismiss: {
+                    print("📞 ProfileView: Contact permission dismissed")
+                    showingContactPermission = false
+                }
+            )
+        }
+        .sheet(isPresented: $showingContactPicker) {
+            ContactPicker(
+                onContactSelected: { name, phoneNumber in
+                    print("📞 ProfileView: Contact callback received - Name: '\(name)', Phone: '\(phoneNumber)'")
+                    
+                    // Update the state immediately on main thread
+                    self.emergencyContactName = name
+                    self.emergencyContactMobile = phoneNumber
+                    self.hasChanges = true
+                    
+                    print("📞 ProfileView: Emergency contact fields updated")
+                    print("📞 ProfileView: emergencyContactName = '\(self.emergencyContactName)'")
+                    print("📞 ProfileView: emergencyContactMobile = '\(self.emergencyContactMobile)'")
+                    
+                    // Dismiss the contact picker
+                    self.showingContactPicker = false
+                },
+                onDismiss: {
+                    print("📞 ProfileView: Contact picker dismissed without selection")
+                    self.showingContactPicker = false
+                }
+            )
+            .interactiveDismissDisabled(false) // Allow swipe to dismiss
         }
         
         // Floating Save Button
@@ -413,15 +662,56 @@ struct ProfileView: View {
     
     // MARK: - Helper Functions
     private func loadProfileData() {
+        print("📞 ProfileView: Loading profile data")
         name = profileManager.userProfile.name
         email = profileManager.userProfile.email
         mobile = profileManager.userProfile.mobile
+        emergencyContactName = profileManager.userProfile.emergencyContactName
+        emergencyContactMobile = profileManager.userProfile.emergencyContactMobile
         hasChanges = false
+        
+        print("📞 ProfileView: Loaded emergency contact - Name: '\(emergencyContactName)', Mobile: '\(emergencyContactMobile)'")
+    }
+    
+    // NEW: Contact picker functionality
+    private func selectFromContacts() {
+        // Dismiss keyboard first to prevent constraint conflicts
+        focusedField = nil
+        
+        let contactsPermission = ContactPermissionHelper.checkContactsPermission()
+        
+        switch contactsPermission {
+        case .authorized:
+            // Add small delay to ensure keyboard is dismissed
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.showingContactPicker = true
+            }
+        case .notDetermined, .denied, .restricted:
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.showingContactPermission = true
+            }
+        @unknown default:
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.showingContactPermission = true
+            }
+        }
     }
     
     private func saveProfile() {
-        profileManager.updateProfile(name: name, email: email, mobile: mobile)
+        print("📞 ProfileView: Saving profile")
+        print("📞 ProfileView: Emergency contact before save - Name: '\(emergencyContactName)', Mobile: '\(emergencyContactMobile)'")
+        
+        profileManager.updateProfile(
+            name: name,
+            email: email,
+            mobile: mobile,
+            emergencyContactName: emergencyContactName,
+            emergencyContactMobile: emergencyContactMobile
+        )
         hasChanges = false
+        
+        print("📞 ProfileView: Profile saved successfully")
+        print("📞 ProfileView: Emergency contact after save - Name: '\(profileManager.userProfile.emergencyContactName)', Mobile: '\(profileManager.userProfile.emergencyContactMobile)'")
         
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
@@ -453,12 +743,30 @@ struct ProfileView: View {
         return cleaned.count >= 10 && cleaned.allSatisfy { $0.isNumber || $0 == "+" || $0 == "-" || $0 == " " || $0 == "(" || $0 == ")" }
     }
     
-    private func isValidProfile() -> Bool {
+    // NEW: Emergency contact validation methods
+    private func isValidEmergencyContactName(_ name: String) -> Bool {
+        return !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    
+    private func isValidEmergencyContactMobile(_ mobile: String) -> Bool {
+        let cleaned = mobile.trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.count >= 10 && cleaned.allSatisfy { $0.isNumber || $0 == "+" || $0 == "-" || $0 == " " || $0 == "(" || $0 == ")" }
+    }
+    
+    private func isValidPersonalInfo() -> Bool {
         return isValidName(name) && isValidEmail(email) && isValidMobile(mobile)
     }
     
+    private func isValidEmergencyContact() -> Bool {
+        return isValidEmergencyContactName(emergencyContactName) && isValidEmergencyContactMobile(emergencyContactMobile)
+    }
+    
+    private func isValidProfile() -> Bool {
+        return isValidPersonalInfo() && hasChanges
+    }
+    
     private func hasValidProfile() -> Bool {
-        return isValidProfile() && hasChanges
+        return isValidProfile()
     }
 }
 

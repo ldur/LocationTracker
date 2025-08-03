@@ -58,7 +58,10 @@ struct ContentView: View {
                                 Spacer()
                                 
                                 // Profile button (NEW)
-                                Button(action: { showingProfileView = true }) {
+                                Button(action: {
+                                    print("📞 ContentView: Opening ProfileView")
+                                    showingProfileView = true
+                                }) {
                                     HStack(spacing: 6) {
                                         if profileManager.isProfileSetup() {
                                             // Show user initial if profile is set up
@@ -144,8 +147,8 @@ struct ContentView: View {
                         // Current Location Card with integrated actions
                         SpotifyLocationCard(
                             address: locationManager.currentAddress,
-                            coordinate: locationManager.currentLocation?.coordinate,
-                            altitude: locationManager.currentLocation?.altitude,
+                            coordinate: safeCLLocationCoordinate(locationManager.currentLocation?.coordinate),
+                            altitude: safeAltitude(locationManager.currentLocation?.altitude),
                             isUpdating: locationManager.isUpdatingLocation,
                             onViewMap: {
                                 showingMapView = true
@@ -323,8 +326,30 @@ struct ContentView: View {
             .sheet(isPresented: $showingProfileView) {
                 // NEW: Profile view
                 ProfileView(profileManager: profileManager)
+                    .interactiveDismissDisabled(false) // Allow swipe to dismiss but prevent accidental dismissal
+            }
+            .onChange(of: showingProfileView) { _, newValue in
+                print("📞 ContentView: ProfileView sheet state changed to: \(newValue)")
             }
         }
+    }
+    
+    // MARK: - Safe Value Helpers to Prevent NaN/CoreGraphics Errors
+    private func safeCLLocationCoordinate(_ coordinate: CLLocationCoordinate2D?) -> CLLocationCoordinate2D? {
+        guard let coordinate = coordinate,
+              coordinate.latitude.isFinite && !coordinate.latitude.isNaN,
+              coordinate.longitude.isFinite && !coordinate.longitude.isNaN else {
+            return nil
+        }
+        return coordinate
+    }
+    
+    private func safeAltitude(_ altitude: Double?) -> Double? {
+        guard let altitude = altitude,
+              altitude.isFinite && !altitude.isNaN else {
+            return nil
+        }
+        return altitude
     }
     
     private func saveCurrentLocation(with comment: String? = nil, photoIdentifiers: [String] = []) { // NEW: Added photo identifiers parameter
