@@ -75,6 +75,20 @@ struct TripDetailView: View {
                                         Text(trip.color.displayName)
                                             .font(.subheadline)
                                             .foregroundColor(.spotifyTextGray)
+                                        
+                                        // NEW: Auto-save indicator
+                                        if trip.autoSaveConfig.isEnabled {
+                                            Text("•")
+                                                .foregroundColor(.spotifyTextGray)
+                                            
+                                            Image(systemName: "location.fill.viewfinder")
+                                                .font(.subheadline)
+                                                .foregroundColor(.spotifyGreen)
+                                            
+                                            Text("Auto")
+                                                .font(.subheadline)
+                                                .foregroundColor(.spotifyGreen)
+                                        }
                                     }
                                 }
                             }
@@ -140,6 +154,40 @@ struct TripDetailView: View {
                                     }
                                 }
                                 
+                                // NEW: Auto-save Configuration Display
+                                if trip.autoSaveConfig.isEnabled {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("Auto-Save Settings")
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.spotifyTextGray)
+                                        
+                                        HStack(spacing: 16) {
+                                            if trip.autoSaveConfig.saveOnRoadChange {
+                                                HStack(spacing: 4) {
+                                                    Image(systemName: "road.lanes")
+                                                        .font(.caption)
+                                                        .foregroundColor(.spotifyGreen)
+                                                    Text("Road Change")
+                                                        .font(.caption)
+                                                        .foregroundColor(.white)
+                                                }
+                                            }
+                                            
+                                            if trip.autoSaveConfig.saveOnTimeInterval {
+                                                HStack(spacing: 4) {
+                                                    Image(systemName: "timer")
+                                                        .font(.caption)
+                                                        .foregroundColor(.spotifyGreen)
+                                                    Text("\(Int(trip.autoSaveConfig.totalIntervalSeconds / 60))min")
+                                                        .font(.caption)
+                                                        .foregroundColor(.white)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
                                 // Statistics
                                 VStack(spacing: 12) {
                                     Text("Trip Statistics")
@@ -187,31 +235,23 @@ struct TripDetailView: View {
                         
                         // Action Buttons
                         VStack(spacing: 12) {
-                            // View on Map
+                            // View Trip Route Button (consistent with Save This Location styling)
                             if !tripLocations.isEmpty {
                                 Button(action: { showingMapView = true }) {
                                     HStack(spacing: 12) {
-                                        Image(systemName: "map.fill")
+                                        Image(systemName: "map.circle.fill")
                                             .font(.title2)
                                         
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text("View Trip on Map")
-                                                .font(.headline)
-                                                .fontWeight(.semibold)
-                                            
-                                            Text("See all locations from this trip")
-                                                .font(.caption)
-                                                .opacity(0.8)
-                                        }
-                                        
-                                        Spacer()
+                                        Text("View Trip Route")
+                                            .font(.headline)
+                                            .fontWeight(.semibold)
                                     }
                                     .foregroundColor(.black)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 56)
                                     .background(
                                         RoundedRectangle(cornerRadius: 28)
-                                            .fill(trip.color.color)
+                                            .fill(Color.spotifyGreen)
                                     )
                                 }
                                 .padding(.horizontal, 24)
@@ -244,12 +284,27 @@ struct TripDetailView: View {
                         // Locations in Trip
                         if !tripLocations.isEmpty {
                             VStack(alignment: .leading, spacing: 16) {
-                                Text("Trip Locations")
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.horizontal, 24)
+                                HStack {
+                                    Text("Trip Route")
+                                        .font(.title3)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                    
+                                    Spacer()
+                                    
+                                    // NEW: Route path indicator
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "point.topleft.down.curvedto.point.bottomright.up")
+                                            .font(.caption)
+                                            .foregroundColor(trip.color.color)
+                                        
+                                        Text("\(formatDistance(tripStatistics.distanceCovered))")
+                                            .font(.caption)
+                                            .foregroundColor(trip.color.color)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 24)
                                 
                                 LazyVStack(spacing: 12) {
                                     ForEach(Array(tripLocations.enumerated()), id: \.element.id) { index, location in
@@ -258,6 +313,8 @@ struct TripDetailView: View {
                                             index: index + 1,
                                             tripColor: trip.color.color,
                                             photoManager: photoManager,
+                                            isFirst: index == 0,
+                                            isLast: index == tripLocations.count - 1,
                                             onTap: {
                                                 selectedLocation = location // NEW: Set selected location
                                             },
@@ -305,6 +362,12 @@ struct TripDetailView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
+                        if !tripLocations.isEmpty {
+                            Button(action: { showingMapView = true }) {
+                                Label("View Route", systemImage: "map")
+                            }
+                        }
+                        
                         if trip.isActive {
                             Button(action: {
                                 tripManager.endActiveTrip()
@@ -331,13 +394,18 @@ struct TripDetailView: View {
                 }
             }
         }
+        // NEW: Use TripRouteMapView instead of AllLocationsMapView
         .fullScreenCover(isPresented: $showingMapView) {
-            AllLocationsMapView(
-                locations: tripLocations,
+            TripRouteMapView(
+                trip: trip,
+                locations: dataManager.savedLocations,
                 onDismiss: { showingMapView = false },
                 onLocationSelected: { location in
-                    // Could show location detail here
                     showingMapView = false
+                    // Small delay to allow map to dismiss before showing detail
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        selectedLocation = location
+                    }
                 }
             )
         }
@@ -377,12 +445,14 @@ struct TripDetailView: View {
     }
 }
 
-// MARK: - Trip Location Row
+// MARK: - Enhanced Trip Location Row with Route Context
 struct TripLocationRow: View {
     let location: LocationData
     let index: Int
     let tripColor: Color
     let photoManager: PhotoManager
+    let isFirst: Bool
+    let isLast: Bool
     let onTap: () -> Void
     let onRemove: () -> Void
     
@@ -391,16 +461,37 @@ struct TripLocationRow: View {
     var body: some View {
         Button(action: onTap) { // NEW: Make entire row tappable
             HStack(spacing: 16) {
-                // Step indicator
-                ZStack {
-                    Circle()
-                        .fill(tripColor.opacity(0.2))
-                        .frame(width: 32, height: 32)
+                // NEW: Enhanced step indicator with route context
+                VStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(tripColor.opacity(0.2))
+                            .frame(width: isFirst || isLast ? 36 : 32, height: isFirst || isLast ? 36 : 32)
+                        
+                        if isFirst {
+                            Image(systemName: "play.fill")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(tripColor)
+                        } else if isLast {
+                            Image(systemName: "stop.fill")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(tripColor)
+                        } else {
+                            Text("\(index)")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(tripColor)
+                        }
+                    }
                     
-                    Text("\(index)")
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundColor(tripColor)
+                    // NEW: Connection line to next location (except for last)
+                    if !isLast {
+                        Rectangle()
+                            .fill(tripColor.opacity(0.4))
+                            .frame(width: 2, height: 16)
+                    }
                 }
                 
                 // Location preview
@@ -423,6 +514,40 @@ struct TripLocationRow: View {
                 
                 // Location info
                 VStack(alignment: .leading, spacing: 4) {
+                    // NEW: Add route context to address
+                    HStack {
+                        if isFirst {
+                            Text("START")
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .foregroundColor(tripColor)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(tripColor.opacity(0.2))
+                                )
+                        } else if isLast {
+                            Text("END")
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .foregroundColor(tripColor)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(tripColor.opacity(0.2))
+                                )
+                        } else {
+                            Text("STOP \(index)")
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.spotifyTextGray)
+                        }
+                        
+                        Spacer()
+                    }
+                    
                     Text(location.address)
                         .font(.headline)
                         .fontWeight(.medium)
@@ -448,6 +573,16 @@ struct TripLocationRow: View {
                             }
                             .foregroundColor(tripColor)
                         }
+                        
+                        if let comment = location.comment, !comment.isEmpty {
+                            Text("•")
+                                .font(.caption)
+                                .foregroundColor(.spotifyTextGray)
+                            
+                            Image(systemName: "text.bubble")
+                                .font(.caption2)
+                                .foregroundColor(.spotifyGreen)
+                        }
                     }
                 }
                 
@@ -466,6 +601,11 @@ struct TripLocationRow: View {
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.spotifyMediumGray.opacity(0.4))
+                .overlay(
+                    // NEW: Subtle border for route context
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(tripColor.opacity(0.3), lineWidth: 1)
+                )
         )
         .onAppear {
             loadThumbnail()
@@ -493,7 +633,7 @@ struct TripLocationRow: View {
     }
 }
 
-// MARK: - Edit Trip Sheet
+// MARK: - Edit Trip Sheet (Updated with Auto-Save Configuration)
 struct EditTripSheet: View {
     let trip: Trip
     let onUpdate: (Trip) -> Void
@@ -502,6 +642,8 @@ struct EditTripSheet: View {
     @State private var tripName: String
     @State private var tripDescription: String
     @State private var selectedColor: Trip.TripColor
+    @State private var autoSaveConfig: AutoSaveConfiguration
+    @State private var showAutoSaveConfig = false
     @FocusState private var isNameFieldFocused: Bool
     
     init(trip: Trip, onUpdate: @escaping (Trip) -> Void) {
@@ -510,6 +652,7 @@ struct EditTripSheet: View {
         self._tripName = State(initialValue: trip.name)
         self._tripDescription = State(initialValue: trip.tripDescription ?? "")
         self._selectedColor = State(initialValue: trip.color)
+        self._autoSaveConfig = State(initialValue: trip.autoSaveConfig)
     }
     
     var body: some View {
@@ -522,129 +665,159 @@ struct EditTripSheet: View {
                 )
                 .ignoresSafeArea()
                 
-                VStack(spacing: 24) {
-                    // Header
-                    VStack(spacing: 12) {
-                        Image(systemName: "pencil.circle.fill")
-                            .font(.system(size: 60))
-                            .foregroundColor(.spotifyGreen)
-                        
-                        Text("Edit Trip")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                    }
-                    .padding(.top, 20)
-                    
-                    VStack(spacing: 20) {
-                        // Trip Name
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Trip Name")
-                                .font(.headline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 24) {
+                        // Header
+                        VStack(spacing: 12) {
+                            Image(systemName: "pencil.circle.fill")
+                                .font(.system(size: 60))
+                                .foregroundColor(.spotifyGreen)
                             
-                            TextField("Trip name", text: $tripName)
-                                .textFieldStyle(.plain)
-                                .font(.body)
+                            Text("Edit Trip")
+                                .font(.title2)
+                                .fontWeight(.bold)
                                 .foregroundColor(.white)
-                                .padding(16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.spotifyLightGray)
-                                )
-                                .focused($isNameFieldFocused)
                         }
+                        .padding(.top, 20)
                         
-                        // Trip Description
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Description")
-                                .font(.headline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
+                        VStack(spacing: 20) {
+                            // Trip Name
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Trip Name")
+                                    .font(.headline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.white)
+                                
+                                TextField("Trip name", text: $tripName)
+                                    .textFieldStyle(.plain)
+                                    .font(.body)
+                                    .foregroundColor(.white)
+                                    .padding(16)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.spotifyLightGray)
+                                    )
+                                    .focused($isNameFieldFocused)
+                            }
                             
-                            TextField("Trip description (optional)", text: $tripDescription, axis: .vertical)
-                                .textFieldStyle(.plain)
-                                .font(.body)
-                                .foregroundColor(.white)
-                                .padding(16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.spotifyLightGray)
-                                )
-                                .lineLimit(3...5)
-                        }
-                        
-                        // Trip Color
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Category")
-                                .font(.headline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
+                            // Trip Description
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Description")
+                                    .font(.headline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.white)
+                                
+                                TextField("Trip description (optional)", text: $tripDescription, axis: .vertical)
+                                    .textFieldStyle(.plain)
+                                    .font(.body)
+                                    .foregroundColor(.white)
+                                    .padding(16)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.spotifyLightGray)
+                                    )
+                                    .lineLimit(3...5)
+                            }
                             
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 12) {
-                                ForEach(Trip.TripColor.allCases, id: \.self) { color in
-                                    Button(action: {
-                                        selectedColor = color
-                                    }) {
-                                        VStack(spacing: 8) {
-                                            Circle()
-                                                .fill(color.color)
-                                                .frame(width: 40, height: 40)
-                                                .overlay(
-                                                    Circle()
-                                                        .stroke(Color.white, lineWidth: selectedColor == color ? 3 : 0)
-                                                )
-                                            
-                                            Text(color.displayName)
-                                                .font(.caption2)
-                                                .foregroundColor(selectedColor == color ? .white : .spotifyTextGray)
-                                                .lineLimit(1)
-                                                .minimumScaleFactor(0.8)
+                            // Trip Color
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Category")
+                                    .font(.headline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.white)
+                                
+                                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 12) {
+                                    ForEach(Trip.TripColor.allCases, id: \.self) { color in
+                                        Button(action: {
+                                            selectedColor = color
+                                        }) {
+                                            VStack(spacing: 8) {
+                                                Circle()
+                                                    .fill(color.color)
+                                                    .frame(width: 40, height: 40)
+                                                    .overlay(
+                                                        Circle()
+                                                            .stroke(Color.white, lineWidth: selectedColor == color ? 3 : 0)
+                                                    )
+                                                
+                                                Text(color.displayName)
+                                                    .font(.caption2)
+                                                    .foregroundColor(selectedColor == color ? .white : .spotifyTextGray)
+                                                    .lineLimit(1)
+                                                    .minimumScaleFactor(0.8)
+                                            }
                                         }
+                                        .buttonStyle(.plain)
                                     }
-                                    .buttonStyle(.plain)
                                 }
                             }
-                        }
-                    }
-                    .padding(.horizontal, 24)
-                    
-                    Spacer()
-                    
-                    // Action Buttons
-                    VStack(spacing: 12) {
-                        Button(action: {
-                            var updatedTrip = trip
-                            updatedTrip.name = tripName
-                            updatedTrip.tripDescription = tripDescription.isEmpty ? nil : tripDescription
-                            updatedTrip.color = selectedColor
                             
-                            onUpdate(updatedTrip)
-                            dismiss()
-                        }) {
-                            Text("Update Trip")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.black)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 56)
+                            // NEW: Auto-Save Configuration (only for active trips)
+                            if trip.isActive {
+                                VStack(spacing: 16) {
+                                    // Auto-Save Toggle
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("Auto-Save Settings")
+                                                .font(.headline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.white)
+                                            
+                                            Text("Automatically save locations during this trip")
+                                                .font(.caption)
+                                                .foregroundColor(.spotifyTextGray)
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Toggle("", isOn: $autoSaveConfig.isEnabled)
+                                            .tint(.spotifyGreen)
+                                    }
+                                    
+                                    // Auto-Save Configuration (when enabled)
+                                    if autoSaveConfig.isEnabled {
+                                        AutoSaveConfigurationView(config: $autoSaveConfig, isExpanded: $showAutoSaveConfig)
+                                            .transition(.asymmetric(
+                                                insertion: .move(edge: .top).combined(with: .opacity),
+                                                removal: .move(edge: .top).combined(with: .opacity)
+                                            ))
+                                    }
+                                }
+                                .padding(16)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 28)
-                                        .fill(selectedColor.color)
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.spotifyMediumGray.opacity(0.6))
                                 )
+                            }
                         }
-                        .disabled(tripName.trimmingCharacters(in: .whitespaces).isEmpty)
-                        .opacity(tripName.trimmingCharacters(in: .whitespaces).isEmpty ? 0.6 : 1.0)
                         .padding(.horizontal, 24)
                         
-                        Button("Cancel") {
-                            dismiss()
-                        }
-                        .font(.subheadline)
-                        .foregroundColor(.spotifyTextGray)
+                        Spacer(minLength: 50)
                     }
-                    .padding(.bottom, 20)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(.spotifyTextGray)
+                }
+                
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Update") {
+                        var updatedTrip = trip
+                        updatedTrip.name = tripName
+                        updatedTrip.tripDescription = tripDescription.isEmpty ? nil : tripDescription
+                        updatedTrip.color = selectedColor
+                        updatedTrip.autoSaveConfig = autoSaveConfig
+                        
+                        onUpdate(updatedTrip)
+                        dismiss()
+                    }
+                    .foregroundColor(tripName.trimmingCharacters(in: .whitespaces).isEmpty ? .spotifyTextGray : .spotifyGreen)
+                    .disabled(tripName.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
         }
