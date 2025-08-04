@@ -39,13 +39,19 @@
 	</dict>
 	<key>CFBundleSignature</key>
 	<string></string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+	<key>CFBundleIdentifier</key>
+	<string></string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>map</string>
 		<string>comgooglemaps</string>
 	</array>
-	<key>UIApplicationExitsOnSuspend</key>
-	<string>Nice Places can access your contacts to help you easily select emergency contact information. This information may be used for safety features when sharing locations.</string>
+    <key>NSContactsUsageDescription</key>
+    <string>Nice Places can access your contacts to help you easily select emergency contact information. This information may be used for safety features when sharing locations.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
