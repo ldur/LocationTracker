@@ -7,21 +7,25 @@ import MapKit
 struct ContentView: View {
     @State private var locationManager = LocationManager()
     @State private var dataManager = DataManager()
-    @State private var photoManager = PhotoManager() // NEW: Photo manager
-    @State private var tripManager = TripManager() // NEW: Trip manager
-    @State private var profileManager = ProfileManager() // NEW: Profile manager
+    @State private var photoManager = PhotoManager()
+    @State private var tripManager = TripManager()
+    @State private var profileManager = ProfileManager()
     @State private var showingSavedLocations = false
-    @State private var showingSaveLocationSheet = false // NEW: Sheet state
-    @State private var showingCamera = false // NEW: Camera sheet state
-    @State private var showingMapView = false // NEW: Map view sheet state
-    @State private var showingTripsView = false // NEW: Trips view
-    @State private var showingStartTripSheet = false // NEW: Start trip sheet
-    @State private var showingTripAssignment = false // NEW: Trip assignment
-    @State private var showingProfileView = false // NEW: Profile view
-    @State private var locationForTripAssignment: LocationData? // NEW: Location to assign
+    @State private var showingSaveLocationSheet = false
+    @State private var showingCamera = false
+    @State private var showingMapView = false
+    @State private var showingTripsView = false
+    @State private var showingStartTripSheet = false
+    @State private var showingTripAssignment = false
+    @State private var showingProfileView = false
+    @State private var locationForTripAssignment: LocationData?
     @State private var pulseAnimation = false
-    @State private var showingPhotoSavedAlert = false // NEW: Photo saved feedback
-    @State private var photoSavedMessage = "" // NEW: Photo saved message
+    @State private var showingPhotoSavedAlert = false
+    @State private var photoSavedMessage = ""
+    
+    // NEW: Auto-save state
+    @State private var autoSaveIndicatorVisible = false
+    @State private var lastAutoSaveMessage = ""
     
     var body: some View {
         NavigationStack {
@@ -57,7 +61,7 @@ struct ContentView: View {
                                 
                                 Spacer()
                                 
-                                // Profile button (NEW)
+                                // Profile button
                                 Button(action: {
                                     print("📞 ContentView: Opening ProfileView")
                                     showingProfileView = true
@@ -130,18 +134,51 @@ struct ContentView: View {
                         .padding(.horizontal, 24)
                         .padding(.top, 20)
                         
-                        // Active Trip Banner (NEW)
+                        // Active Trip Banner with Auto-Save Indicator
                         if let activeTrip = tripManager.activeTrip {
-                            ActiveTripBanner(
-                                trip: activeTrip,
-                                locationCount: activeTrip.locationIds.count,
-                                onTap: {
-                                    // Could show trip detail here
-                                },
-                                onEnd: {
-                                    tripManager.endActiveTrip()
+                            VStack(spacing: 12) {
+                                ActiveTripBanner(
+                                    trip: activeTrip,
+                                    locationCount: activeTrip.locationIds.count,
+                                    onTap: {
+                                        // Could show trip detail here
+                                    },
+                                    onEnd: {
+                                        tripManager.endActiveTrip()
+                                    }
+                                )
+                                
+                                // NEW: Auto-Save Status Indicator
+                                if activeTrip.autoSaveConfig.isEnabled {
+                                    AutoSaveStatusView(
+                                        config: activeTrip.autoSaveConfig,
+                                        isVisible: autoSaveIndicatorVisible,
+                                        lastMessage: lastAutoSaveMessage
+                                    )
                                 }
-                            )
+                                
+                                // NEW: Debug info (remove in production)
+                                #if DEBUG
+                                if activeTrip.autoSaveConfig.isEnabled {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Debug Auto-Save Info:")
+                                            .font(.caption2)
+                                            .foregroundColor(.orange)
+                                        
+                                        Text(tripManager.getAutoSaveDebugInfo())
+                                            .font(.caption2)
+                                            .foregroundColor(.spotifyTextGray)
+                                            .monospaced()
+                                    }
+                                    .padding(8)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(Color.orange.opacity(0.1))
+                                    )
+                                    .padding(.horizontal, 24)
+                                }
+                                #endif
+                            }
                         }
                         
                         // Current Location Card with integrated actions
@@ -165,7 +202,7 @@ struct ContentView: View {
                         VStack(spacing: 16) {
                             // Save Location Button
                             Button(action: {
-                                showingSaveLocationSheet = true // NEW: Show sheet instead of direct save
+                                showingSaveLocationSheet = true
                             }) {
                                 HStack(spacing: 12) {
                                     Image(systemName: "plus.circle.fill")
@@ -200,7 +237,6 @@ struct ContentView: View {
                                             .font(.headline)
                                             .fontWeight(.medium)
                                         
-                                        // Show photo count if any locations have photos
                                         let totalPhotos = dataManager.savedLocations.reduce(0) { $0 + $1.photoIdentifiers.count }
                                         let locationsText = "\(dataManager.savedLocations.count) locations"
                                         let photosText = totalPhotos > 0 ? " • \(totalPhotos) photos" : ""
@@ -212,7 +248,6 @@ struct ContentView: View {
                                     
                                     Spacer()
                                     
-                                    // Show camera icon if there are photos
                                     if dataManager.savedLocations.contains(where: { !$0.photoIdentifiers.isEmpty }) {
                                         Image(systemName: "photo.fill")
                                             .font(.caption)
@@ -241,6 +276,18 @@ struct ContentView: View {
             }
             .onAppear {
                 locationManager.requestLocation()
+                setupAutoSaveObserver()
+            }
+            .onDisappear {
+                removeAutoSaveObserver()
+            }
+            // NEW: Monitor location changes for auto-save with street tracking
+            .onChange(of: locationManager.currentLocation) { oldLocation, newLocation in
+                handleLocationChangeForAutoSave(newLocation)
+            }
+            // NEW: Also monitor address changes for more accurate street detection
+            .onChange(of: locationManager.currentAddress) { oldAddress, newAddress in
+                handleAddressChangeForAutoSave(newAddress)
             }
             .alert("Permission Required", isPresented: .constant(locationManager.errorMessage != nil)) {
                 Button("OK") {
@@ -253,7 +300,6 @@ struct ContentView: View {
                 SpotifySavedLocationsView(dataManager: dataManager)
             }
             .sheet(isPresented: $showingSaveLocationSheet) {
-                // NEW: Save location sheet with comment input
                 if let location = locationManager.currentLocation {
                     SaveLocationSheet(
                         address: locationManager.currentAddress,
@@ -266,7 +312,6 @@ struct ContentView: View {
                 }
             }
             .sheet(isPresented: $showingCamera) {
-                // NEW: Camera sheet for quick photo capture
                 if locationManager.currentLocation != nil {
                     PhotoCaptureSheet(
                         onImageCaptured: { image in
@@ -282,7 +327,6 @@ struct ContentView: View {
                 }
             }
             .fullScreenCover(isPresented: $showingMapView) {
-                // NEW: Map view for current location
                 if let location = locationManager.currentLocation {
                     LocationMapView(
                         location: location,
@@ -304,9 +348,15 @@ struct ContentView: View {
             .sheet(isPresented: $showingTripsView) {
                 TripsView(tripManager: tripManager, dataManager: dataManager)
             }
+            // UPDATED: Enhanced StartTripSheet with auto-save configuration
             .sheet(isPresented: $showingStartTripSheet) {
-                StartTripSheet { name, description, color in
-                    let _ = tripManager.startNewTrip(name: name, description: description, color: color)
+                StartTripSheet { name, description, color, autoSaveConfig in
+                    let _ = tripManager.startNewTrip(
+                        name: name,
+                        description: description,
+                        color: color,
+                        autoSaveConfig: autoSaveConfig
+                    )
                 }
             }
             .sheet(isPresented: $showingTripAssignment) {
@@ -324,13 +374,113 @@ struct ContentView: View {
                 }
             }
             .fullScreenCover(isPresented: $showingProfileView) {
-                // Changed to fullScreenCover for better stability
                 ProfileView(profileManager: profileManager)
             }
             .onChange(of: showingProfileView) { _, newValue in
                 print("📞 ContentView: ProfileView sheet state changed to: \(newValue)")
             }
         }
+    }
+    
+    // MARK: - NEW: Enhanced Auto-Save Management with Street Tracking
+    private func setupAutoSaveObserver() {
+        NotificationCenter.default.addObserver(
+            forName: .autoSaveLocationRequested,
+            object: nil,
+            queue: .main
+        ) { [self] notification in
+            handleAutoSaveRequest(notification)
+        }
+    }
+    
+    private func removeAutoSaveObserver() {
+        NotificationCenter.default.removeObserver(self, name: .autoSaveLocationRequested, object: nil)
+    }
+    
+    private func handleAutoSaveRequest(_ notification: Notification) {
+        guard let currentLocation = locationManager.currentLocation else { return }
+        
+        let reason = notification.userInfo?["reason"] as? String ?? "unknown"
+        print("🚗 ContentView: Auto-save requested, reason: \(reason)")
+        
+        // Auto-save the current location
+        saveCurrentLocationForAutoSave(reason: reason)
+        
+        // Show auto-save feedback
+        showAutoSaveFeedback(reason: reason)
+    }
+    
+    private func handleLocationChangeForAutoSave(_ newLocation: CLLocation?) {
+        guard let newLocation = newLocation else { return }
+        
+        // Check if we should auto-save based on location change (street-based)
+        if tripManager.shouldAutoSaveLocation(newLocation, currentAddress: locationManager.currentAddress) {
+            print("🚗 ContentView: Location change triggered auto-save")
+            saveCurrentLocationForAutoSave(reason: "roadChange")
+            showAutoSaveFeedback(reason: "roadChange")
+        }
+    }
+    
+    // NEW: Handle address changes for more accurate street detection
+    private func handleAddressChangeForAutoSave(_ newAddress: String) {
+        guard let currentLocation = locationManager.currentLocation,
+              !newAddress.isEmpty,
+              newAddress != "Finding your location...",
+              newAddress != "Address unavailable" else {
+            return
+        }
+        
+        // Check if we should auto-save based on address change (street-based)
+        if tripManager.shouldAutoSaveLocation(currentLocation, currentAddress: newAddress) {
+            print("🚗 ContentView: Address change triggered auto-save")
+            saveCurrentLocationForAutoSave(reason: "roadChange")
+            showAutoSaveFeedback(reason: "roadChange")
+        }
+    }
+    
+    private func saveCurrentLocationForAutoSave(reason: String) {
+        guard let currentLocation = locationManager.currentLocation else { return }
+        
+        let comment = generateAutoSaveComment(reason: reason)
+        saveCurrentLocation(with: comment, isAutoSave: true)
+        
+        // UPDATED: Pass address to trip manager for street tracking
+        tripManager.didAutoSaveLocation(currentLocation, address: locationManager.currentAddress)
+    }
+    
+    private func generateAutoSaveComment(reason: String) -> String {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        let timeString = formatter.string(from: Date())
+        
+        switch reason {
+        case "roadChange":
+            return "Auto-saved: Street change detected at \(timeString)"
+        case "timeInterval":
+            return "Auto-saved: Time interval at \(timeString)"
+        default:
+            return "Auto-saved at \(timeString)"
+        }
+    }
+    
+    private func showAutoSaveFeedback(reason: String) {
+        let message = reason == "roadChange" ? "Location auto-saved (street change)" : "Location auto-saved (time interval)"
+        
+        withAnimation(.easeInOut(duration: 0.3)) {
+            lastAutoSaveMessage = message
+            autoSaveIndicatorVisible = true
+        }
+        
+        // Hide after 3 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                autoSaveIndicatorVisible = false
+            }
+        }
+        
+        // Light haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
     }
     
     // MARK: - Safe Value Helpers to Prevent NaN/CoreGraphics Errors
@@ -351,34 +501,34 @@ struct ContentView: View {
         return altitude
     }
     
-    private func saveCurrentLocation(with comment: String? = nil, photoIdentifiers: [String] = []) { // NEW: Added photo identifiers parameter
+    private func saveCurrentLocation(with comment: String? = nil, photoIdentifiers: [String] = [], isAutoSave: Bool = false) {
         guard let currentLocation = locationManager.currentLocation else { return }
         
         let locationData = LocationData(
             address: locationManager.currentAddress,
             coordinate: currentLocation.coordinate,
             altitude: currentLocation.altitude,
-            comment: comment, // NEW: Pass comment to LocationData
-            photoIdentifiers: photoIdentifiers // NEW: Pass photo identifiers
+            comment: comment,
+            photoIdentifiers: photoIdentifiers
         )
         
         dataManager.saveLocation(locationData)
         
-        // NEW: Auto-assign to active trip
+        // Auto-assign to active trip
         if let activeTrip = tripManager.activeTrip {
             tripManager.addLocationToActiveTrip(locationData.id)
-        } else if !tripManager.savedTrips.isEmpty {
-            // Show trip assignment option if there are existing trips
+        } else if !tripManager.savedTrips.isEmpty && !isAutoSave {
+            // Show trip assignment option if there are existing trips (not for auto-save)
             locationForTripAssignment = locationData
             showingTripAssignment = true
         }
         
-        // Haptic feedback
-        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        // Haptic feedback (lighter for auto-save)
+        let impactFeedback = UIImpactFeedbackGenerator(style: isAutoSave ? .light : .medium)
         impactFeedback.impactOccurred()
     }
     
-    // NEW: Handle captured image from camera
+    // Handle captured image from camera
     private func handleCapturedImage(_ image: UIImage) {
         guard locationManager.currentLocation != nil else { return }
         
@@ -387,7 +537,6 @@ struct ContentView: View {
         photoManager.saveImage(image) { identifier in
             if let identifier = identifier {
                 print("Photo saved with identifier: \(identifier)")
-                // Create location with photo or save to existing location
                 saveLocationWithPhoto(identifier, type: "photo")
             } else {
                 print("Failed to save photo")
@@ -397,7 +546,7 @@ struct ContentView: View {
         showingCamera = false
     }
     
-    // NEW: Handle captured video from camera
+    // Handle captured video from camera
     private func handleCapturedVideo(_ url: URL) {
         guard locationManager.currentLocation != nil else { return }
         
@@ -406,7 +555,6 @@ struct ContentView: View {
         photoManager.saveVideo(from: url) { identifier in
             if let identifier = identifier {
                 print("Video saved with identifier: \(identifier)")
-                // Create location with video or save to existing location
                 saveLocationWithPhoto(identifier, type: "video")
             } else {
                 print("Failed to save video")
@@ -416,7 +564,7 @@ struct ContentView: View {
         showingCamera = false
     }
     
-    // NEW: Save location with photo/video
+    // Save location with photo/video
     private func saveLocationWithPhoto(_ photoIdentifier: String, type: String) {
         guard let currentLocation = locationManager.currentLocation else { return }
         
@@ -427,7 +575,6 @@ struct ContentView: View {
             let distance = CLLocation(latitude: currentLocation.coordinate.latitude, longitude: currentLocation.coordinate.longitude)
                 .distance(from: CLLocation(latitude: savedLocation.coordinate.latitude, longitude: savedLocation.coordinate.longitude))
             
-            // More flexible matching - within 100m OR very similar address
             let isNearby = distance < 100
             let hasSimilarAddress = savedLocation.address.lowercased().contains(locationManager.currentAddress.lowercased().components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces) ?? "") ||
                                    locationManager.currentAddress.lowercased().contains(savedLocation.address.lowercased().components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces) ?? "")
@@ -451,7 +598,6 @@ struct ContentView: View {
             )
             dataManager.updateLocation(updatedLocation)
             
-            // Show feedback
             photoSavedMessage = "\(type.capitalized) added to existing location: \(existing.address)"
             showingPhotoSavedAlert = true
         } else {
@@ -459,35 +605,27 @@ struct ContentView: View {
             print("Creating new location with \(type)")
             saveCurrentLocation(with: "Captured at this location", photoIdentifiers: [photoIdentifier])
             
-            // Show feedback
             photoSavedMessage = "\(type.capitalized) saved! New location created: \(locationManager.currentAddress)"
             showingPhotoSavedAlert = true
         }
         
-        // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.impactOccurred()
     }
     
     // MARK: - Share Position Functions
-    
     private func shareCurrentPosition() {
         guard let currentLocation = locationManager.currentLocation else { return }
         
-        // Use ProfileManager to get the user name (NEW: Uses profile if available)
         let userName = profileManager.getShareName()
-        
-        // Create timestamp in DD.MM.YYYY - HH:MM format
         let formatter = DateFormatter()
         formatter.dateFormat = "dd.MM.yyyy - HH:mm"
         let timestamp = formatter.string(from: Date())
         
-        // Create Apple Maps URL with location name for better display
         let coordinate = currentLocation.coordinate
         let encodedAddress = locationManager.currentAddress.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let appleMapURL = "http://maps.apple.com/?ll=\(coordinate.latitude),\(coordinate.longitude)&q=\(encodedAddress)"
         
-        // Create the share message in new format
         let shareText = """
         \(userName) has shared their current position with you
         
@@ -498,16 +636,9 @@ struct ContentView: View {
         📱 Shared from Nice Places app
         """
         
-        // Create activity items - separate text and URL for better link handling
-        let activityItems: [Any] = [
-            shareText,
-            URL(string: appleMapURL)!
-        ]
-        
-        // Present activity controller
+        let activityItems: [Any] = [shareText, URL(string: appleMapURL)!]
         presentActivityController(with: activityItems)
         
-        // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
     }
@@ -518,14 +649,12 @@ struct ContentView: View {
             applicationActivities: nil
         )
         
-        // Configure for iPad
         if let popover = activityVC.popoverPresentationController {
             popover.sourceView = UIApplication.shared.windows.first
             popover.sourceRect = CGRect(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2, width: 0, height: 0)
             popover.permittedArrowDirections = []
         }
         
-        // Customize sharing options
         activityVC.excludedActivityTypes = [
             .addToReadingList,
             .assignToContact,
@@ -536,18 +665,69 @@ struct ContentView: View {
             .postToTencentWeibo
         ]
         
-        // Present the activity controller
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let window = windowScene.windows.first,
            let rootViewController = window.rootViewController {
             
-            // Find the top-most view controller
             var topController = rootViewController
             while let presentedController = topController.presentedViewController {
                 topController = presentedController
             }
             
             topController.present(activityVC, animated: true)
+        }
+    }
+}
+
+// MARK: - NEW: Auto-Save Status View
+struct AutoSaveStatusView: View {
+    let config: AutoSaveConfiguration
+    let isVisible: Bool
+    let lastMessage: String
+    
+    var body: some View {
+        if isVisible {
+            HStack(spacing: 12) {
+                Image(systemName: "location.fill.viewfinder")
+                    .font(.caption)
+                    .foregroundColor(.spotifyGreen)
+                
+                Text(lastMessage)
+                    .font(.caption)
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                // Auto-save settings indicator
+                HStack(spacing: 4) {
+                    if config.saveOnRoadChange {
+                        Image(systemName: "road.lanes")
+                            .font(.caption2)
+                            .foregroundColor(.spotifyGreen)
+                    }
+                    
+                    if config.saveOnTimeInterval {
+                        Image(systemName: "timer")
+                            .font(.caption2)
+                            .foregroundColor(.spotifyGreen)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.spotifyGreen.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.spotifyGreen.opacity(0.3), lineWidth: 1)
+                    )
+            )
+            .padding(.horizontal, 24)
+            .transition(.asymmetric(
+                insertion: .move(edge: .top).combined(with: .opacity),
+                removal: .move(edge: .top).combined(with: .opacity)
+            ))
         }
     }
 }

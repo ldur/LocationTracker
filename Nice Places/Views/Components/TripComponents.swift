@@ -47,7 +47,7 @@ struct ActiveTripBanner: View {
                         
                         Spacer()
                         
-                        // Active indicator
+                        // Active indicator with auto-save status
                         HStack(spacing: 4) {
                             Circle()
                                 .fill(trip.color.color)
@@ -57,6 +57,13 @@ struct ActiveTripBanner: View {
                                 .font(.caption2)
                                 .fontWeight(.bold)
                                 .foregroundColor(trip.color.color)
+                            
+                            // NEW: Auto-save indicator
+                            if trip.autoSaveConfig.isEnabled {
+                                Image(systemName: "location.fill.viewfinder")
+                                    .font(.caption2)
+                                    .foregroundColor(.spotifyGreen)
+                            }
                         }
                     }
                     
@@ -79,6 +86,28 @@ struct ActiveTripBanner: View {
                             Text("\(locationCount)")
                                 .font(.caption)
                                 .foregroundColor(.white)
+                        }
+                        
+                        // NEW: Auto-save status
+                        if trip.autoSaveConfig.isEnabled {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Auto-save")
+                                    .font(.caption)
+                                    .foregroundColor(.spotifyTextGray)
+                                
+                                HStack(spacing: 2) {
+                                    if trip.autoSaveConfig.saveOnRoadChange {
+                                        Image(systemName: "road.lanes")
+                                            .font(.caption2)
+                                            .foregroundColor(.spotifyGreen)
+                                    }
+                                    if trip.autoSaveConfig.saveOnTimeInterval {
+                                        Image(systemName: "timer")
+                                            .font(.caption2)
+                                            .foregroundColor(.spotifyGreen)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -141,6 +170,21 @@ struct TripCard: View {
                             Text(trip.durationDescription)
                                 .font(.caption)
                                 .foregroundColor(.spotifyTextGray)
+                            
+                            // NEW: Auto-save indicator for completed trips
+                            if trip.autoSaveConfig.isEnabled {
+                                Text("•")
+                                    .font(.caption)
+                                    .foregroundColor(.spotifyTextGray)
+                                
+                                Image(systemName: "location.fill.viewfinder")
+                                    .font(.caption)
+                                    .foregroundColor(.spotifyGreen)
+                                
+                                Text("Auto")
+                                    .font(.caption)
+                                    .foregroundColor(.spotifyGreen)
+                            }
                         }
                     }
                     
@@ -244,15 +288,17 @@ struct StatisticView: View {
     }
 }
 
-// MARK: - Start Trip Sheet
+// MARK: - NEW: Enhanced Start Trip Sheet with Auto-Save Configuration
 struct StartTripSheet: View {
-    let onStartTrip: (String, String?, Trip.TripColor) -> Void
+    let onStartTrip: (String, String?, Trip.TripColor, AutoSaveConfiguration) -> Void
     
     @Environment(\.dismiss) private var dismiss
     @State private var tripName: String = ""
     @State private var tripDescription: String = ""
     @State private var selectedColor: Trip.TripColor = .green
     @State private var showDescription = false
+    @State private var autoSaveConfig = AutoSaveConfiguration()
+    @State private var showAutoSaveConfig = false
     @FocusState private var isNameFieldFocused: Bool
     
     var body: some View {
@@ -265,114 +311,34 @@ struct StartTripSheet: View {
                 )
                 .ignoresSafeArea()
                 
-                VStack(spacing: 24) {
-                    // Header
-                    VStack(spacing: 12) {
-                        Image(systemName: "location.circle.fill")
-                            .font(.system(size: 60))
-                            .foregroundColor(.spotifyGreen)
-                        
-                        Text("Start New Trip")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                        
-                        Text("Begin tracking your journey")
-                            .font(.subheadline)
-                            .foregroundColor(.spotifyTextGray)
-                    }
-                    .padding(.top, 20)
-                    
-                    VStack(spacing: 20) {
-                        // Trip Name
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Trip Name")
-                                .font(.headline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
-                            
-                            TextField("Weekend Adventure, Business Trip...", text: $tripName)
-                                .textFieldStyle(.plain)
-                                .font(.body)
-                                .foregroundColor(.white)
-                                .padding(16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.spotifyLightGray)
-                                )
-                                .focused($isNameFieldFocused)
-                        }
-                        
-                        // Trip Color
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Trip Category")
-                                .font(.headline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
-                            
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 12) {
-                                ForEach(Trip.TripColor.allCases, id: \.self) { color in
-                                    Button(action: {
-                                        selectedColor = color
-                                    }) {
-                                        VStack(spacing: 8) {
-                                            Circle()
-                                                .fill(color.color)
-                                                .frame(width: 40, height: 40)
-                                                .overlay(
-                                                    Circle()
-                                                        .stroke(Color.white, lineWidth: selectedColor == color ? 3 : 0)
-                                                )
-                                            
-                                            Text(color.displayName)
-                                                .font(.caption2)
-                                                .foregroundColor(selectedColor == color ? .white : .spotifyTextGray)
-                                                .lineLimit(1)
-                                                .minimumScaleFactor(0.8)
-                                        }
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        }
-                        
-                        // Optional Description
-                        if !showDescription {
-                            Button(action: {
-                                withAnimation(.easeInOut) {
-                                    showDescription = true
-                                }
-                            }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "plus.circle")
-                                        .font(.subheadline)
-                                    Text("Add description (optional)")
-                                        .font(.subheadline)
-                                }
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 24) {
+                        // Header
+                        VStack(spacing: 12) {
+                            Image(systemName: "location.circle.fill")
+                                .font(.system(size: 60))
                                 .foregroundColor(.spotifyGreen)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                        } else {
+                            
+                            Text("Start New Trip")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            Text("Begin tracking your journey")
+                                .font(.subheadline)
+                                .foregroundColor(.spotifyTextGray)
+                        }
+                        .padding(.top, 20)
+                        
+                        VStack(spacing: 20) {
+                            // Trip Name
                             VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Text("Description")
-                                        .font(.headline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.white)
-                                    
-                                    Spacer()
-                                    
-                                    Button("Remove") {
-                                        withAnimation(.easeInOut) {
-                                            showDescription = false
-                                            tripDescription = ""
-                                        }
-                                    }
-                                    .font(.caption)
-                                    .foregroundColor(.spotifyTextGray)
-                                }
+                                Text("Trip Name")
+                                    .font(.headline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.white)
                                 
-                                TextField("What's this trip about?", text: $tripDescription, axis: .vertical)
+                                TextField("Weekend Adventure, Business Trip...", text: $tripName)
                                     .textFieldStyle(.plain)
                                     .font(.body)
                                     .foregroundColor(.white)
@@ -381,61 +347,387 @@ struct StartTripSheet: View {
                                         RoundedRectangle(cornerRadius: 12)
                                             .fill(Color.spotifyLightGray)
                                     )
-                                    .lineLimit(3...5)
+                                    .focused($isNameFieldFocused)
                             }
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .top).combined(with: .opacity),
-                                removal: .move(edge: .top).combined(with: .opacity)
-                            ))
-                        }
-                    }
-                    .padding(.horizontal, 24)
-                    
-                    Spacer()
-                    
-                    // Action Buttons
-                    VStack(spacing: 12) {
-                        Button(action: {
-                            let finalDescription = tripDescription.trimmingCharacters(in: .whitespacesAndNewlines)
-                            onStartTrip(
-                                tripName,
-                                finalDescription.isEmpty ? nil : finalDescription,
-                                selectedColor
+                            
+                            // Trip Color
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Trip Category")
+                                    .font(.headline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.white)
+                                
+                                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 12) {
+                                    ForEach(Trip.TripColor.allCases, id: \.self) { color in
+                                        Button(action: {
+                                            selectedColor = color
+                                        }) {
+                                            VStack(spacing: 8) {
+                                                Circle()
+                                                    .fill(color.color)
+                                                    .frame(width: 40, height: 40)
+                                                    .overlay(
+                                                        Circle()
+                                                            .stroke(Color.white, lineWidth: selectedColor == color ? 3 : 0)
+                                                    )
+                                                
+                                                Text(color.displayName)
+                                                    .font(.caption2)
+                                                    .foregroundColor(selectedColor == color ? .white : .spotifyTextGray)
+                                                    .lineLimit(1)
+                                                    .minimumScaleFactor(0.8)
+                                            }
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
+                            
+                            // NEW: Auto-Save Configuration Section
+                            VStack(spacing: 16) {
+                                // Auto-Save Toggle
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Automatic Location Saving")
+                                            .font(.headline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.white)
+                                        
+                                        Text("Save locations automatically during your trip")
+                                            .font(.caption)
+                                            .foregroundColor(.spotifyTextGray)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Toggle("", isOn: $autoSaveConfig.isEnabled)
+                                        .tint(.spotifyGreen)
+                                }
+                                
+                                // Auto-Save Configuration (when enabled)
+                                if autoSaveConfig.isEnabled {
+                                    AutoSaveConfigurationView(config: $autoSaveConfig, isExpanded: $showAutoSaveConfig)
+                                        .transition(.asymmetric(
+                                            insertion: .move(edge: .top).combined(with: .opacity),
+                                            removal: .move(edge: .top).combined(with: .opacity)
+                                        ))
+                                }
+                            }
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.spotifyMediumGray.opacity(0.6))
                             )
-                            dismiss()
-                        }) {
-                            Text("Start Trip")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.black)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 56)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 28)
-                                        .fill(selectedColor.color)
-                                )
+                            
+                            // Optional Description
+                            if !showDescription {
+                                Button(action: {
+                                    withAnimation(.easeInOut) {
+                                        showDescription = true
+                                    }
+                                }) {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "plus.circle")
+                                            .font(.subheadline)
+                                        Text("Add description (optional)")
+                                            .font(.subheadline)
+                                    }
+                                    .foregroundColor(.spotifyGreen)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            } else {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text("Description")
+                                            .font(.headline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.white)
+                                        
+                                        Spacer()
+                                        
+                                        Button("Remove") {
+                                            withAnimation(.easeInOut) {
+                                                showDescription = false
+                                                tripDescription = ""
+                                            }
+                                        }
+                                        .font(.caption)
+                                        .foregroundColor(.spotifyTextGray)
+                                    }
+                                    
+                                    TextField("What's this trip about?", text: $tripDescription, axis: .vertical)
+                                        .textFieldStyle(.plain)
+                                        .font(.body)
+                                        .foregroundColor(.white)
+                                        .padding(16)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(Color.spotifyLightGray)
+                                        )
+                                        .lineLimit(3...5)
+                                }
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .top).combined(with: .opacity),
+                                    removal: .move(edge: .top).combined(with: .opacity)
+                                ))
+                            }
                         }
-                        .disabled(tripName.trimmingCharacters(in: .whitespaces).isEmpty)
-                        .opacity(tripName.trimmingCharacters(in: .whitespaces).isEmpty ? 0.6 : 1.0)
                         .padding(.horizontal, 24)
                         
-                        Button("Cancel") {
-                            dismiss()
-                        }
-                        .font(.subheadline)
-                        .foregroundColor(.spotifyTextGray)
+                        Spacer(minLength: 50)
                     }
-                    .padding(.bottom, 20)
                 }
             }
-            .onAppear {
-                isNameFieldFocused = true
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(.spotifyTextGray)
+                }
+                
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Start") {
+                        let finalDescription = tripDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                        onStartTrip(
+                            tripName,
+                            finalDescription.isEmpty ? nil : finalDescription,
+                            selectedColor,
+                            autoSaveConfig
+                        )
+                        dismiss()
+                    }
+                    .foregroundColor(tripName.trimmingCharacters(in: .whitespaces).isEmpty ? .spotifyTextGray : .spotifyGreen)
+                    .disabled(tripName.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+        .onAppear {
+            isNameFieldFocused = true
+        }
+    }
+}
+
+// MARK: - NEW: Auto-Save Configuration View
+struct AutoSaveConfigurationView: View {
+    @Binding var config: AutoSaveConfiguration
+    @Binding var isExpanded: Bool
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Configuration Toggle Button
+            if !isExpanded {
+                Button(action: {
+                    withAnimation(.easeInOut) {
+                        isExpanded = true
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "gear")
+                            .font(.subheadline)
+                            .foregroundColor(.spotifyGreen)
+                        
+                        Text("Configure auto-save settings")
+                            .font(.subheadline)
+                            .foregroundColor(.spotifyGreen)
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.down")
+                            .font(.caption)
+                            .foregroundColor(.spotifyGreen)
+                    }
+                }
+            } else {
+                // Expanded Configuration
+                VStack(spacing: 16) {
+                    // Header with collapse button
+                    HStack {
+                        Text("Auto-Save Settings")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            withAnimation(.easeInOut) {
+                                isExpanded = false
+                            }
+                        }) {
+                            Image(systemName: "chevron.up")
+                                .font(.caption)
+                                .foregroundColor(.spotifyTextGray)
+                        }
+                    }
+                    
+                    // Preset Buttons
+                    VStack(spacing: 8) {
+                        Text("Quick Presets")
+                            .font(.caption)
+                            .foregroundColor(.spotifyTextGray)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        HStack(spacing: 8) {
+                            PresetButton(title: "Walking", preset: .walking, currentConfig: $config)
+                            PresetButton(title: "Bicycle", preset: .bicycle, currentConfig: $config)
+                            PresetButton(title: "Car", preset: .car, currentConfig: $config)
+                        }
+                    }
+                    
+                    Divider()
+                        .background(Color.spotifyTextGray.opacity(0.3))
+                    
+                    // Road Change Configuration
+                    VStack(spacing: 12) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Save on Road Change")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.white)
+                                
+                                Text("Automatically save when moving to different streets")
+                                    .font(.caption)
+                                    .foregroundColor(.spotifyTextGray)
+                            }
+                            
+                            Spacer()
+                            
+                            Toggle("", isOn: $config.saveOnRoadChange)
+                                .tint(.spotifyGreen)
+                        }
+                        
+                        if config.saveOnRoadChange {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Minimum Distance: \(Int(config.minimumDistanceMeters))m")
+                                    .font(.caption)
+                                    .foregroundColor(.spotifyTextGray)
+                                
+                                Slider(
+                                    value: $config.minimumDistanceMeters,
+                                    in: 50...1000,
+                                    step: 25
+                                )
+                                .tint(.spotifyGreen)
+                            }
+                        }
+                    }
+                    
+                    Divider()
+                        .background(Color.spotifyTextGray.opacity(0.3))
+                    
+                    // Time Interval Configuration
+                    VStack(spacing: 12) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Save on Time Interval")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.white)
+                                
+                                Text("Automatically save at regular time intervals")
+                                    .font(.caption)
+                                    .foregroundColor(.spotifyTextGray)
+                            }
+                            
+                            Spacer()
+                            
+                            Toggle("", isOn: $config.saveOnTimeInterval)
+                                .tint(.spotifyGreen)
+                        }
+                        
+                        if config.saveOnTimeInterval {
+                            HStack(spacing: 16) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Minutes")
+                                        .font(.caption)
+                                        .foregroundColor(.spotifyTextGray)
+                                    
+                                    Picker("Minutes", selection: $config.timeIntervalMinutes) {
+                                        ForEach(0...59, id: \.self) { minute in
+                                            Text("\(minute)").tag(minute)
+                                        }
+                                    }
+                                    .pickerStyle(.wheel)
+                                    .frame(height: 80)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Seconds")
+                                        .font(.caption)
+                                        .foregroundColor(.spotifyTextGray)
+                                    
+                                    Picker("Seconds", selection: $config.timeIntervalSeconds) {
+                                        ForEach([0, 15, 30, 45], id: \.self) { second in
+                                            Text("\(second)").tag(second)
+                                        }
+                                    }
+                                    .pickerStyle(.wheel)
+                                    .frame(height: 80)
+                                }
+                            }
+                            
+                            // Time validation
+                            if !config.isValidTimeInterval {
+                                HStack {
+                                    Image(systemName: "exclamationmark.triangle")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                    
+                                    Text("Time interval must be between 30 seconds and 1 hour")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                }
+                            }
+                        }
+                    }
+                }
+                .transition(.asymmetric(
+                    insertion: .move(edge: .top).combined(with: .opacity),
+                    removal: .move(edge: .top).combined(with: .opacity)
+                ))
             }
         }
     }
 }
 
-// MARK: - Trip Location Assignment Sheet
+// MARK: - NEW: Preset Button Helper
+struct PresetButton: View {
+    let title: String
+    let preset: AutoSaveConfiguration
+    @Binding var currentConfig: AutoSaveConfiguration
+    
+    var isSelected: Bool {
+        currentConfig.isEnabled == preset.isEnabled &&
+        currentConfig.saveOnRoadChange == preset.saveOnRoadChange &&
+        currentConfig.saveOnTimeInterval == preset.saveOnTimeInterval &&
+        currentConfig.timeIntervalMinutes == preset.timeIntervalMinutes &&
+        currentConfig.timeIntervalSeconds == preset.timeIntervalSeconds &&
+        abs(currentConfig.minimumDistanceMeters - preset.minimumDistanceMeters) < 1.0
+    }
+    
+    var body: some View {
+        Button(action: {
+            currentConfig = preset
+        }) {
+            Text(title)
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(isSelected ? .black : .spotifyGreen)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isSelected ? Color.spotifyGreen : Color.spotifyGreen.opacity(0.2))
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Trip Assignment Sheet
 struct TripAssignmentSheet: View {
     let location: LocationData
     let availableTrips: [Trip]
@@ -595,6 +887,17 @@ struct TripSelectionRow: View {
                         Text("\(trip.locationIds.count) locations")
                             .font(.caption)
                             .foregroundColor(.spotifyTextGray)
+                        
+                        // Auto-save indicator
+                        if trip.autoSaveConfig.isEnabled {
+                            Text("•")
+                                .font(.caption)
+                                .foregroundColor(.spotifyTextGray)
+                            
+                            Image(systemName: "location.fill.viewfinder")
+                                .font(.caption)
+                                .foregroundColor(.spotifyGreen)
+                        }
                     }
                 }
                 
@@ -617,7 +920,6 @@ struct TripSelectionRow: View {
 #Preview {
     let sampleTrip = Trip(name: "Weekend Adventure", description: "Exploring the city", color: .green)
     
-    // Create sample locations for the trip
     let sampleLocations = [
         LocationData(
             address: "Apple Park, Cupertino, CA",
@@ -625,23 +927,9 @@ struct TripSelectionRow: View {
             altitude: 56.7,
             comment: "Amazing place!",
             photoIdentifiers: ["photo1", "photo2"]
-        ),
-        LocationData(
-            address: "Golden Gate Bridge, San Francisco, CA",
-            coordinate: CLLocationCoordinate2D(latitude: 37.8199, longitude: -122.4783),
-            altitude: 67.2,
-            photoIdentifiers: ["photo3", "photo4", "photo5"]
-        ),
-        LocationData(
-            address: "Pier 39, San Francisco, CA",
-            coordinate: CLLocationCoordinate2D(latitude: 37.8086, longitude: -122.4098),
-            altitude: 3.1,
-            comment: "Great seafood!",
-            photoIdentifiers: ["photo6"]
         )
     ]
     
-    // Use proper TripStatistics initializer
     let sampleStats = TripStatistics(trip: sampleTrip, locations: sampleLocations)
     
     TripCard(

@@ -15,6 +15,9 @@ struct Trip: Identifiable, Codable, Hashable, Equatable {
     var tripDescription: String?
     var color: TripColor // Visual identifier
     
+    // NEW: Auto-save configuration
+    var autoSaveConfig: AutoSaveConfiguration
+    
     // Trip categories
     enum TripColor: String, CaseIterable, Codable {
         case green = "spotifyGreen"
@@ -53,7 +56,7 @@ struct Trip: Identifiable, Codable, Hashable, Equatable {
         }
     }
     
-    init(name: String, description: String? = nil, color: TripColor = .green) {
+    init(name: String, description: String? = nil, color: TripColor = .green, autoSaveConfig: AutoSaveConfiguration = AutoSaveConfiguration()) {
         self.id = UUID()
         self.name = name
         self.startDate = Date()
@@ -63,10 +66,11 @@ struct Trip: Identifiable, Codable, Hashable, Equatable {
         self.coverPhotoIdentifier = nil
         self.tripDescription = description
         self.color = color
+        self.autoSaveConfig = autoSaveConfig // NEW: Initialize with default config
     }
     
     // Initialize with existing data for retrospective trips
-    init(name: String, locationIds: [UUID], startDate: Date, endDate: Date? = nil, description: String? = nil, color: TripColor = .green) {
+    init(name: String, locationIds: [UUID], startDate: Date, endDate: Date? = nil, description: String? = nil, color: TripColor = .green, autoSaveConfig: AutoSaveConfiguration = AutoSaveConfiguration()) {
         self.id = UUID()
         self.name = name
         self.startDate = startDate
@@ -76,6 +80,7 @@ struct Trip: Identifiable, Codable, Hashable, Equatable {
         self.coverPhotoIdentifier = nil
         self.tripDescription = description
         self.color = color
+        self.autoSaveConfig = autoSaveConfig // NEW: Initialize with default config
     }
     
     // MARK: - Computed Properties
@@ -130,6 +135,11 @@ struct Trip: Identifiable, Codable, Hashable, Equatable {
         coverPhotoIdentifier = photoIdentifier
     }
     
+    // NEW: Update auto-save configuration
+    mutating func updateAutoSaveConfig(_ config: AutoSaveConfiguration) {
+        autoSaveConfig = config
+    }
+    
     // MARK: - Hashable & Equatable
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
@@ -138,6 +148,91 @@ struct Trip: Identifiable, Codable, Hashable, Equatable {
     static func == (lhs: Trip, rhs: Trip) -> Bool {
         return lhs.id == rhs.id
     }
+}
+
+// MARK: - NEW: Auto-Save Configuration
+struct AutoSaveConfiguration: Codable, Equatable {
+    var isEnabled: Bool
+    var saveOnRoadChange: Bool
+    var saveOnTimeInterval: Bool
+    var timeIntervalMinutes: Int
+    var timeIntervalSeconds: Int
+    var minimumDistanceMeters: Double // Minimum distance to travel before considering road change
+    
+    // Computed property for total interval in seconds
+    var totalIntervalSeconds: TimeInterval {
+        return TimeInterval(timeIntervalMinutes * 60 + timeIntervalSeconds)
+    }
+    
+    // Default configuration
+    init(
+        isEnabled: Bool = false,
+        saveOnRoadChange: Bool = true,
+        saveOnTimeInterval: Bool = false,
+        timeIntervalMinutes: Int = 5,
+        timeIntervalSeconds: Int = 0,
+        minimumDistanceMeters: Double = 100.0
+    ) {
+        self.isEnabled = isEnabled
+        self.saveOnRoadChange = saveOnRoadChange
+        self.saveOnTimeInterval = saveOnTimeInterval
+        self.timeIntervalMinutes = timeIntervalMinutes
+        self.timeIntervalSeconds = timeIntervalSeconds
+        self.minimumDistanceMeters = minimumDistanceMeters
+    }
+    
+    // Validation helpers
+    var isValidTimeInterval: Bool {
+        return totalIntervalSeconds >= 30 && totalIntervalSeconds <= 3600 // Between 30 seconds and 1 hour
+    }
+    
+    var isValidDistance: Bool {
+        return minimumDistanceMeters >= 50 && minimumDistanceMeters <= 1000 // Between 50m and 1km
+    }
+    
+    var hasValidConfiguration: Bool {
+        guard isEnabled else { return true } // If disabled, configuration doesn't need to be valid
+        
+        if saveOnTimeInterval && !isValidTimeInterval {
+            return false
+        }
+        
+        if saveOnRoadChange && !isValidDistance {
+            return false
+        }
+        
+        return saveOnRoadChange || saveOnTimeInterval // At least one method must be enabled
+    }
+    
+    // UPDATED: Preset configurations with new names
+    static let bicycle = AutoSaveConfiguration(
+        isEnabled: true,
+        saveOnRoadChange: true,
+        saveOnTimeInterval: true,
+        timeIntervalMinutes: 2,
+        timeIntervalSeconds: 0,
+        minimumDistanceMeters: 150.0
+    )
+    
+    static let car = AutoSaveConfiguration(
+        isEnabled: true,
+        saveOnRoadChange: true,
+        saveOnTimeInterval: true,
+        timeIntervalMinutes: 5,
+        timeIntervalSeconds: 0,
+        minimumDistanceMeters: 500.0
+    )
+    
+    static let walking = AutoSaveConfiguration(
+        isEnabled: true,
+        saveOnRoadChange: true,
+        saveOnTimeInterval: true,
+        timeIntervalMinutes: 1,
+        timeIntervalSeconds: 30,
+        minimumDistanceMeters: 75.0
+    )
+    
+    static let disabled = AutoSaveConfiguration(isEnabled: false)
 }
 
 // MARK: - Trip Statistics Helper

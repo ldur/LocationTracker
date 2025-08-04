@@ -248,9 +248,15 @@ struct TripsView: View {
                 }
             }
         }
+        // FIXED: Updated StartTripSheet to include AutoSaveConfiguration parameter
         .sheet(isPresented: $showingStartTripSheet) {
-            StartTripSheet { name, description, color in
-                let _ = tripManager.startNewTrip(name: name, description: description, color: color)
+            StartTripSheet { name, description, color, autoSaveConfig in
+                let _ = tripManager.startNewTrip(
+                    name: name,
+                    description: description,
+                    color: color,
+                    autoSaveConfig: autoSaveConfig
+                )
             }
         }
         .sheet(isPresented: $showingTripSuggestions) {
