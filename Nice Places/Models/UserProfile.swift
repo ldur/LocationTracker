@@ -6,18 +6,20 @@ struct UserProfile: Codable, Equatable {
     var name: String
     var email: String
     var mobile: String
-    var emergencyContactName: String // NEW: Emergency contact name
-    var emergencyContactMobile: String // NEW: Emergency contact mobile
+    var emergencyContactName: String
+    var emergencyContactMobile: String
+    var showEmergencyButton: Bool // NEW: Toggle for showing emergency button on main screen
     var isSetup: Bool
     let createdDate: Date
     var lastUpdated: Date
     
-    init(name: String = "", email: String = "", mobile: String = "", emergencyContactName: String = "", emergencyContactMobile: String = "") {
+    init(name: String = "", email: String = "", mobile: String = "", emergencyContactName: String = "", emergencyContactMobile: String = "", showEmergencyButton: Bool = true) {
         self.name = name
         self.email = email
         self.mobile = mobile
         self.emergencyContactName = emergencyContactName
         self.emergencyContactMobile = emergencyContactMobile
+        self.showEmergencyButton = showEmergencyButton
         self.isSetup = !name.isEmpty
         self.createdDate = Date()
         self.lastUpdated = Date()
@@ -39,7 +41,7 @@ struct UserProfile: Codable, Equatable {
         return cleaned.count >= 10 && cleaned.allSatisfy { $0.isNumber || $0 == "+" || $0 == "-" || $0 == " " || $0 == "(" || $0 == ")" }
     }
     
-    // NEW: Emergency contact validation
+    // Emergency contact validation
     var hasValidEmergencyContactName: Bool {
         return !emergencyContactName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -53,11 +55,15 @@ struct UserProfile: Codable, Equatable {
         return hasValidEmergencyContactName && hasValidEmergencyContactMobile
     }
     
+    // NEW: Check if emergency button should be shown (has contact AND toggle is enabled)
+    var shouldShowEmergencyButton: Bool {
+        return hasEmergencyContact && showEmergencyButton
+    }
+    
     var isComplete: Bool {
         return hasValidName && hasValidEmail && hasValidMobile
     }
     
-    // NEW: Check if profile is complete including emergency contact
     var isCompleteWithEmergencyContact: Bool {
         return isComplete && hasEmergencyContact
     }
@@ -66,14 +72,21 @@ struct UserProfile: Codable, Equatable {
         return hasValidName ? name : "User"
     }
     
-    // Update profile data
-    mutating func update(name: String, email: String, mobile: String, emergencyContactName: String = "", emergencyContactMobile: String = "") {
+    // Update profile data - UPDATED to include showEmergencyButton parameter
+    mutating func update(name: String, email: String, mobile: String, emergencyContactName: String = "", emergencyContactMobile: String = "", showEmergencyButton: Bool = true) {
         self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         self.email = email.trimmingCharacters(in: .whitespacesAndNewlines)
         self.mobile = mobile.trimmingCharacters(in: .whitespacesAndNewlines)
         self.emergencyContactName = emergencyContactName.trimmingCharacters(in: .whitespacesAndNewlines)
         self.emergencyContactMobile = emergencyContactMobile.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.showEmergencyButton = showEmergencyButton
         self.isSetup = hasValidName
+        self.lastUpdated = Date()
+    }
+    
+    // NEW: Update just the emergency button toggle
+    mutating func updateEmergencyButtonVisibility(_ show: Bool) {
+        self.showEmergencyButton = show
         self.lastUpdated = Date()
     }
 }

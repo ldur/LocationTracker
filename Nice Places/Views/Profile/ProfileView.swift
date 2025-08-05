@@ -12,11 +12,12 @@ struct ProfileView: View {
     @State private var mobile: String = ""
     @State private var emergencyContactName: String = ""
     @State private var emergencyContactMobile: String = ""
+    @State private var showEmergencyButton: Bool = true // NEW: Emergency button visibility toggle
     @State private var showingClearAlert = false
     @State private var hasChanges = false
     @State private var showingContactPicker = false
     @State private var showingContactPermission = false
-    @State private var isProcessingContact = false // NEW: To prevent unwanted dismissals
+    @State private var isProcessingContact = false
     
     @FocusState private var focusedField: Field?
     
@@ -406,30 +407,147 @@ struct ProfileView: View {
                                         }
                                 }
                                 
+                                // NEW: Emergency Button Visibility Toggle
+                                if isValidEmergencyContact() {
+                                    VStack(spacing: 16) {
+                                        // Toggle Section
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text("Show Emergency Button")
+                                                    .font(.headline)
+                                                    .fontWeight(.medium)
+                                                    .foregroundColor(.white)
+                                                
+                                                Text("Display emergency button on main screen")
+                                                    .font(.caption)
+                                                    .foregroundColor(.spotifyTextGray)
+                                            }
+                                            
+                                            Spacer()
+                                            
+                                            Toggle("", isOn: $showEmergencyButton)
+                                                .tint(.red)
+                                                .onChange(of: showEmergencyButton) { _, _ in
+                                                    hasChanges = true
+                                                }
+                                        }
+                                        
+                                        // Emergency Button Preview
+                                        VStack(spacing: 12) {
+                                            HStack {
+                                                Text("Button Preview")
+                                                    .font(.subheadline)
+                                                    .fontWeight(.medium)
+                                                    .foregroundColor(.spotifyTextGray)
+                                                
+                                                Spacer()
+                                            }
+                                            
+                                            HStack {
+                                                // Preview of what the button looks like
+                                                ZStack {
+                                                    Circle()
+                                                        .fill(Color.red)
+                                                        .frame(width: 36, height: 36)
+                                                        .opacity(showEmergencyButton ? 1.0 : 0.3)
+                                                    
+                                                    Image(systemName: "phone.fill")
+                                                        .font(.caption)
+                                                        .foregroundColor(.white)
+                                                        .opacity(showEmergencyButton ? 1.0 : 0.3)
+                                                }
+                                                
+                                                VStack(alignment: .leading, spacing: 2) {
+                                                    Text("Emergency Contact")
+                                                        .font(.caption)
+                                                        .fontWeight(.medium)
+                                                        .foregroundColor(showEmergencyButton ? .white : .spotifyTextGray)
+                                                    
+                                                    Text(showEmergencyButton ? "Will appear on main screen" : "Hidden from main screen")
+                                                        .font(.caption2)
+                                                        .foregroundColor(.spotifyTextGray)
+                                                }
+                                                
+                                                Spacer()
+                                            }
+                                            .padding(12)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .fill(Color.spotifyMediumGray.opacity(0.4))
+                                            )
+                                        }
+                                    }
+                                    .padding(16)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.red.opacity(0.05))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .stroke(Color.red.opacity(0.2), lineWidth: 1)
+                                            )
+                                    )
+                                }
+                                
                                 // Emergency Contact Info
                                 VStack(spacing: 8) {
                                     HStack {
-                                        Image(systemName: "info.circle")
-                                            .font(.caption)
-                                            .foregroundColor(.blue)
+                                        Image(systemName: "info.circle.fill")
+                                            .font(.title2)
+                                            .foregroundColor(.spotifyGreen)
                                         
-                                        Text("About Emergency Contact")
-                                            .font(.caption)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(.blue)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("Emergency Contact")
+                                                .font(.headline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.white)
+                                            
+                                            Text("Quick access to your emergency contact")
+                                                .font(.subheadline)
+                                                .foregroundColor(.spotifyTextGray)
+                                        }
                                         
                                         Spacer()
                                     }
                                     
-                                    Text("This contact information may be used in emergency situations when sharing locations or in case of safety concerns. It's optional but recommended for safety.")
-                                        .font(.caption)
-                                        .foregroundColor(.spotifyTextGray)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("About Emergency Contact:")
+                                            .font(.caption)
+                                            .foregroundColor(.spotifyTextGray)
+                                        
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "phone.fill")
+                                                    .font(.caption)
+                                                    .foregroundColor(.spotifyGreen)
+                                                Text("Quick call and SMS access")
+                                                    .font(.caption)
+                                                    .foregroundColor(.spotifyTextGray)
+                                            }
+                                            
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "location.fill")
+                                                    .font(.caption)
+                                                    .foregroundColor(.spotifyGreen)
+                                                Text("Automatic location sharing in emergencies")
+                                                    .font(.caption)
+                                                    .foregroundColor(.spotifyTextGray)
+                                            }
+                                            
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "eye.slash")
+                                                    .font(.caption)
+                                                    .foregroundColor(.orange)
+                                                Text("Can be hidden from main screen via toggle above")
+                                                    .font(.caption)
+                                                    .foregroundColor(.spotifyTextGray)
+                                            }
+                                        }
+                                    }
                                 }
-                                .padding(12)
+                                .padding(20)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.blue.opacity(0.1))
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(Color.spotifyMediumGray.opacity(0.6))
                                 )
                             }
                             
@@ -679,9 +797,10 @@ struct ProfileView: View {
         mobile = profileManager.userProfile.mobile
         emergencyContactName = profileManager.userProfile.emergencyContactName
         emergencyContactMobile = profileManager.userProfile.emergencyContactMobile
+        showEmergencyButton = profileManager.userProfile.showEmergencyButton // NEW: Load toggle state
         hasChanges = false
         
-        print("📞 ProfileView: Loaded emergency contact - Name: '\(emergencyContactName)', Mobile: '\(emergencyContactMobile)'")
+        print("📞 ProfileView: Loaded emergency contact - Name: '\(emergencyContactName)', Mobile: '\(emergencyContactMobile)', ShowButton: \(showEmergencyButton)")
     }
     
     // Contact picker functionality with improved timing
@@ -713,19 +832,20 @@ struct ProfileView: View {
     
     private func saveProfile() {
         print("📞 ProfileView: Saving profile")
-        print("📞 ProfileView: Emergency contact before save - Name: '\(emergencyContactName)', Mobile: '\(emergencyContactMobile)'")
+        print("📞 ProfileView: Emergency contact before save - Name: '\(emergencyContactName)', Mobile: '\(emergencyContactMobile)', ShowButton: \(showEmergencyButton)")
         
         profileManager.updateProfile(
             name: name,
             email: email,
             mobile: mobile,
             emergencyContactName: emergencyContactName,
-            emergencyContactMobile: emergencyContactMobile
+            emergencyContactMobile: emergencyContactMobile,
+            showEmergencyButton: showEmergencyButton // NEW: Include toggle state
         )
         hasChanges = false
         
         print("📞 ProfileView: Profile saved successfully")
-        print("📞 ProfileView: Emergency contact after save - Name: '\(profileManager.userProfile.emergencyContactName)', Mobile: '\(profileManager.userProfile.emergencyContactMobile)'")
+        print("📞 ProfileView: Emergency contact after save - Name: '\(profileManager.userProfile.emergencyContactName)', Mobile: '\(profileManager.userProfile.emergencyContactMobile)', ShowButton: \(profileManager.userProfile.showEmergencyButton)")
         
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)

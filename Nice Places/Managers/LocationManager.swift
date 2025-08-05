@@ -120,26 +120,74 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
         }
     }
     
+    // UPDATED: Format address according to Norwegian conventions
     private func formatAddress(from placemark: CLPlacemark) -> String {
-        var components: [String] = []
+        var addressComponents: [String] = []
         
-        if let streetNumber = placemark.subThoroughfare {
-            components.append(streetNumber)
-        }
+        // NORWEGIAN FORMAT: Street name + house number (no comma between them)
+        var streetComponent = ""
+        
         if let streetName = placemark.thoroughfare {
-            components.append(streetName)
-        }
-        if let city = placemark.locality {
-            components.append(city)
-        }
-        if let state = placemark.administrativeArea {
-            components.append(state)
-        }
-        if let postalCode = placemark.postalCode {
-            components.append(postalCode)
+            streetComponent = streetName
+            
+            // Add house number after street name (Norwegian style)
+            if let streetNumber = placemark.subThoroughfare {
+                streetComponent += " \(streetNumber)"
+            }
+        } else if let streetNumber = placemark.subThoroughfare {
+            // Fallback: if we only have street number
+            streetComponent = streetNumber
         }
         
-        return components.isEmpty ? "Unknown Address" : components.joined(separator: ", ")
+        if !streetComponent.isEmpty {
+            addressComponents.append(streetComponent)
+        }
+        
+        // NORWEGIAN FORMAT: Postal code + city (space separated, no comma between them)
+        var cityComponent = ""
+        
+        if let postalCode = placemark.postalCode,
+           let city = placemark.locality {
+            cityComponent = "\(postalCode) \(city)"
+        } else if let city = placemark.locality {
+            // Fallback: city only if no postal code
+            cityComponent = city
+        } else if let postalCode = placemark.postalCode {
+            // Fallback: postal code only if no city
+            cityComponent = postalCode
+        }
+        
+        if !cityComponent.isEmpty {
+            addressComponents.append(cityComponent)
+        }
+        
+        // Join main components with comma and space
+        let formattedAddress = addressComponents.joined(separator: ", ")
+        
+        // Fallback for edge cases
+        if formattedAddress.isEmpty {
+            var fallbackComponents: [String] = []
+            
+            if let streetNumber = placemark.subThoroughfare {
+                fallbackComponents.append(streetNumber)
+            }
+            if let streetName = placemark.thoroughfare {
+                fallbackComponents.append(streetName)
+            }
+            if let city = placemark.locality {
+                fallbackComponents.append(city)
+            }
+            if let state = placemark.administrativeArea {
+                fallbackComponents.append(state)
+            }
+            if let postalCode = placemark.postalCode {
+                fallbackComponents.append(postalCode)
+            }
+            
+            return fallbackComponents.isEmpty ? "Unknown Address" : fallbackComponents.joined(separator: ", ")
+        }
+        
+        return formattedAddress
     }
     
     // MARK: - Public Utility Methods

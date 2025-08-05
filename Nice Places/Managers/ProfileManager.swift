@@ -16,8 +16,8 @@ class ProfileManager {
     }
     
     // MARK: - Profile Management
-    func updateProfile(name: String, email: String, mobile: String, emergencyContactName: String = "", emergencyContactMobile: String = "") {
-        userProfile.update(name: name, email: email, mobile: mobile, emergencyContactName: emergencyContactName, emergencyContactMobile: emergencyContactMobile)
+    func updateProfile(name: String, email: String, mobile: String, emergencyContactName: String = "", emergencyContactMobile: String = "", showEmergencyButton: Bool = true) {
+        userProfile.update(name: name, email: email, mobile: mobile, emergencyContactName: emergencyContactName, emergencyContactMobile: emergencyContactMobile, showEmergencyButton: showEmergencyButton)
         saveProfile()
     }
     
@@ -81,7 +81,7 @@ class ProfileManager {
         return userProfile.isSetup
     }
     
-    // NEW: Emergency contact methods
+    // Emergency contact methods
     func hasEmergencyContact() -> Bool {
         return userProfile.hasEmergencyContact
     }
@@ -96,5 +96,19 @@ class ProfileManager {
     
     func isCompleteWithEmergencyContact() -> Bool {
         return userProfile.isCompleteWithEmergencyContact
+    }
+    
+    // NEW: Emergency button visibility methods
+    func shouldShowEmergencyButton() -> Bool {
+        return userProfile.shouldShowEmergencyButton
+    }
+    
+    func updateEmergencyButtonVisibility(_ show: Bool) {
+        userProfile.updateEmergencyButtonVisibility(show)
+        saveProfile()
+    }
+    
+    func getEmergencyButtonVisibility() -> Bool {
+        return userProfile.showEmergencyButton
     }
 }

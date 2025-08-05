@@ -24,14 +24,13 @@ struct ContentView: View {
     @State private var showingPhotoSavedAlert = false
     @State private var photoSavedMessage = ""
     
-    // NEW: Auto-save state
+    // Auto-save state
     @State private var autoSaveIndicatorVisible = false
     @State private var lastAutoSaveMessage = ""
     
-    // NEW: Emergency functionality state
+    // Emergency functionality state
     @State private var showingEmergencySheet = false
     @State private var showingMessageComposer = false
-    @State private var emergencyPulse = false
     
     var body: some View {
         NavigationStack {
@@ -66,26 +65,6 @@ struct ContentView: View {
                                 }
                                 
                                 Spacer()
-                                
-                                // NEW: Emergency button (top right)
-                                if profileManager.hasEmergencyContact() {
-                                    Button(action: { showingEmergencySheet = true }) {
-                                        ZStack {
-                                            Circle()
-                                                .fill(Color.red)
-                                                .frame(width: 44, height: 44)
-                                                .scaleEffect(emergencyPulse ? 1.1 : 1.0)
-                                                .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: emergencyPulse)
-                                            
-                                            Image(systemName: "phone.fill")
-                                                .font(.headline)
-                                                .foregroundColor(.white)
-                                        }
-                                    }
-                                    .onAppear {
-                                        emergencyPulse = true
-                                    }
-                                }
                                 
                                 // Profile button
                                 Button(action: {
@@ -174,7 +153,7 @@ struct ContentView: View {
                                     }
                                 )
                                 
-                                // NEW: Auto-Save Status Indicator
+                                // Auto-Save Status Indicator
                                 if activeTrip.autoSaveConfig.isEnabled {
                                     AutoSaveStatusView(
                                         config: activeTrip.autoSaveConfig,
@@ -183,7 +162,7 @@ struct ContentView: View {
                                     )
                                 }
                                 
-                                // NEW: Debug info (remove in production)
+                                // Debug info (remove in production)
                                 #if DEBUG
                                 if activeTrip.autoSaveConfig.isEnabled {
                                     VStack(alignment: .leading, spacing: 4) {
@@ -252,8 +231,8 @@ struct ContentView: View {
                             .disabled(locationManager.currentLocation == nil)
                             .padding(.horizontal, 24)
                             
-                            // NEW: Emergency Button (if emergency contact is set up)
-                            if profileManager.hasEmergencyContact() {
+                            // UPDATED: Emergency Button - now checks the toggle setting instead of just hasEmergencyContact
+                            if profileManager.shouldShowEmergencyButton() {
                                 Button(action: { showingEmergencySheet = true }) {
                                     HStack(spacing: 12) {
                                         Image(systemName: "phone.circle.fill")
@@ -329,11 +308,11 @@ struct ContentView: View {
             .onDisappear {
                 removeAutoSaveObserver()
             }
-            // NEW: Monitor location changes for auto-save with street tracking
+            // Monitor location changes for auto-save with street tracking
             .onChange(of: locationManager.currentLocation) { oldLocation, newLocation in
                 handleLocationChangeForAutoSave(newLocation)
             }
-            // NEW: Also monitor address changes for more accurate street detection
+            // Also monitor address changes for more accurate street detection
             .onChange(of: locationManager.currentAddress) { oldAddress, newAddress in
                 handleAddressChangeForAutoSave(newAddress)
             }
@@ -396,7 +375,7 @@ struct ContentView: View {
             .sheet(isPresented: $showingTripsView) {
                 TripsView(tripManager: tripManager, dataManager: dataManager)
             }
-            // UPDATED: Enhanced StartTripSheet with auto-save configuration
+            // Enhanced StartTripSheet with auto-save configuration
             .sheet(isPresented: $showingStartTripSheet) {
                 StartTripSheet { name, description, color, autoSaveConfig in
                     let _ = tripManager.startNewTrip(
@@ -427,7 +406,7 @@ struct ContentView: View {
             .onChange(of: showingProfileView) { _, newValue in
                 print("📞 ContentView: ProfileView sheet state changed to: \(newValue)")
             }
-            // NEW: Emergency Contact Sheet
+            // Emergency Contact Sheet
             .sheet(isPresented: $showingEmergencySheet) {
                 EmergencyContactSheet(
                     profileManager: profileManager,
@@ -436,7 +415,7 @@ struct ContentView: View {
                     onDismiss: { showingEmergencySheet = false }
                 )
             }
-            // NEW: Message Composer
+            // Message Composer
             .sheet(isPresented: $showingMessageComposer) {
                 MessageComposerView(
                     recipient: profileManager.getEmergencyContactMobile(),
@@ -449,7 +428,7 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - NEW: Enhanced Auto-Save Management with Street Tracking
+    // MARK: - Enhanced Auto-Save Management with Street Tracking
     private func setupAutoSaveObserver() {
         NotificationCenter.default.addObserver(
             forName: .autoSaveLocationRequested,
@@ -488,7 +467,7 @@ struct ContentView: View {
         }
     }
     
-    // NEW: Handle address changes for more accurate street detection
+    // Handle address changes for more accurate street detection
     private func handleAddressChangeForAutoSave(_ newAddress: String) {
         guard let currentLocation = locationManager.currentLocation,
               !newAddress.isEmpty,
@@ -511,7 +490,7 @@ struct ContentView: View {
         let comment = generateAutoSaveComment(reason: reason)
         saveCurrentLocation(with: comment, isAutoSave: true)
         
-        // UPDATED: Pass address to trip manager for street tracking
+        // Pass address to trip manager for street tracking
         tripManager.didAutoSaveLocation(currentLocation, address: locationManager.currentAddress)
     }
     
@@ -746,7 +725,7 @@ struct ContentView: View {
     }
 }
 
-// MARK: - NEW: Emergency Contact Sheet
+// MARK: - Emergency Contact Sheet
 struct EmergencyContactSheet: View {
     let profileManager: ProfileManager
     let currentLocation: CLLocation?
@@ -886,28 +865,6 @@ struct EmergencyContactSheet: View {
                             )
                         }
                         .padding(.horizontal, 24)
-                        
-                        // Share Location Button
-                        if currentLocation != nil {
-                            Button(action: shareEmergencyLocation) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "square.and.arrow.up")
-                                        .font(.title2)
-                                    
-                                    Text("Share My Location")
-                                        .font(.headline)
-                                        .fontWeight(.semibold)
-                                }
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 56)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 28)
-                                        .fill(Color.spotifyGreen)
-                                )
-                            }
-                            .padding(.horizontal, 24)
-                        }
                     }
                     
                     Spacer()
@@ -950,6 +907,16 @@ struct EmergencyContactSheet: View {
                     .foregroundColor(.white)
                 }
             }
+        }
+        // FIXED: Add the missing sheet presentation for message composer
+        .sheet(isPresented: $showingMessageComposer) {
+            MessageComposerView(
+                recipient: profileManager.getEmergencyContactMobile(),
+                recipientName: profileManager.getEmergencyContactName(),
+                currentLocation: currentLocation,
+                currentAddress: currentAddress,
+                userName: profileManager.getDisplayName()
+            )
         }
     }
     
@@ -1011,63 +978,9 @@ struct EmergencyContactSheet: View {
         
         onDismiss()
     }
-    
-    private func shareEmergencyLocation() {
-        guard let location = currentLocation else { return }
-        
-        let userName = profileManager.getDisplayName()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd.MM.yyyy - HH:mm"
-        let timestamp = formatter.string(from: Date())
-        
-        let coordinate = location.coordinate
-        let encodedAddress = currentAddress.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let appleMapURL = "http://maps.apple.com/?ll=\(coordinate.latitude),\(coordinate.longitude)&q=\(encodedAddress)"
-        
-        let shareText = """
-        🚨 EMERGENCY LOCATION SHARE
-        
-        \(userName) is sharing their location for safety
-        
-        Time: \(timestamp)
-        
-        \(currentAddress)
-        
-        Emergency Contact: \(profileManager.getEmergencyContactName())
-        
-        📱 Shared from Nice Places app
-        """
-        
-        let activityItems: [Any] = [shareText, URL(string: appleMapURL)!]
-        
-        let activityVC = UIActivityViewController(
-            activityItems: activityItems,
-            applicationActivities: nil
-        )
-        
-        if let popover = activityVC.popoverPresentationController {
-            popover.sourceView = UIApplication.shared.windows.first
-            popover.sourceRect = CGRect(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2, width: 0, height: 0)
-            popover.permittedArrowDirections = []
-        }
-        
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first,
-           let rootViewController = window.rootViewController {
-            
-            var topController = rootViewController
-            while let presentedController = topController.presentedViewController {
-                topController = presentedController
-            }
-            
-            topController.present(activityVC, animated: true)
-        }
-        
-        onDismiss()
-    }
 }
 
-// MARK: - NEW: Message Composer View
+// MARK: - Message Composer View
 struct MessageComposerView: UIViewControllerRepresentable {
     let recipient: String
     let recipientName: String
@@ -1141,7 +1054,7 @@ struct MessageComposerView: UIViewControllerRepresentable {
     }
 }
 
-// MARK: - NEW: Auto-Save Status View
+// MARK: - Auto-Save Status View
 struct AutoSaveStatusView: View {
     let config: AutoSaveConfiguration
     let isVisible: Bool
