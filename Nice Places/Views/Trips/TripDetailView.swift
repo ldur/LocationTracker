@@ -11,7 +11,7 @@ struct TripDetailView: View {
     
     @State private var showingMapView = false
     @State private var showingEditSheet = false
-    @State private var selectedLocation: LocationData? // NEW: For location detail view
+    @State private var selectedLocation: LocationData?
     @State private var photoManager = PhotoManager()
     
     private var tripLocations: [LocationData] {
@@ -76,18 +76,20 @@ struct TripDetailView: View {
                                             .font(.subheadline)
                                             .foregroundColor(.spotifyTextGray)
                                         
-                                        // NEW: Auto-save indicator
+                                        // NEW: Enhanced auto-save indicator with trip type
                                         if trip.autoSaveConfig.isEnabled {
                                             Text("•")
                                                 .foregroundColor(.spotifyTextGray)
                                             
-                                            Image(systemName: "location.fill.viewfinder")
-                                                .font(.subheadline)
-                                                .foregroundColor(.spotifyGreen)
-                                            
-                                            Text("Auto")
-                                                .font(.subheadline)
-                                                .foregroundColor(.spotifyGreen)
+                                            HStack(spacing: 2) {
+                                                Image(systemName: trip.autoSaveConfig.tripType.icon)
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.spotifyGreen)
+                                                
+                                                Text(trip.autoSaveConfig.tripType.displayName)
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.spotifyGreen)
+                                            }
                                         }
                                     }
                                 }
@@ -154,13 +156,34 @@ struct TripDetailView: View {
                                     }
                                 }
                                 
-                                // NEW: Auto-save Configuration Display
+                                // Enhanced Auto-save Configuration Display with Trip Type
                                 if trip.autoSaveConfig.isEnabled {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("Auto-Save Settings")
-                                            .font(.caption)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(.spotifyTextGray)
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        HStack {
+                                            Text("Auto-Save Configuration")
+                                                .font(.caption)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.spotifyTextGray)
+                                            
+                                            Spacer()
+                                            
+                                            // Trip type badge
+                                            HStack(spacing: 4) {
+                                                Text(trip.autoSaveConfig.tripType.emoji)
+                                                    .font(.caption)
+                                                
+                                                Text(trip.autoSaveConfig.tripType.displayName)
+                                                    .font(.caption)
+                                                    .fontWeight(.medium)
+                                                    .foregroundColor(.spotifyGreen)
+                                            }
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 6)
+                                                    .fill(Color.spotifyGreen.opacity(0.2))
+                                            )
+                                        }
                                         
                                         HStack(spacing: 16) {
                                             if trip.autoSaveConfig.saveOnRoadChange {
@@ -292,15 +315,33 @@ struct TripDetailView: View {
                                     
                                     Spacer()
                                     
-                                    // NEW: Route path indicator
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "point.topleft.down.curvedto.point.bottomright.up")
-                                            .font(.caption)
-                                            .foregroundColor(trip.color.color)
+                                    // Enhanced route path indicator with trip type
+                                    HStack(spacing: 8) {
+                                        if trip.autoSaveConfig.isEnabled && trip.autoSaveConfig.tripType != .custom {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: trip.autoSaveConfig.tripType.icon)
+                                                    .font(.caption)
+                                                    .foregroundColor(trip.color.color)
+                                                
+                                                Text(trip.autoSaveConfig.tripType.displayName)
+                                                    .font(.caption)
+                                                    .foregroundColor(trip.color.color)
+                                            }
+                                            
+                                            Text("•")
+                                                .font(.caption)
+                                                .foregroundColor(.spotifyTextGray)
+                                        }
                                         
-                                        Text("\(formatDistance(tripStatistics.distanceCovered))")
-                                            .font(.caption)
-                                            .foregroundColor(trip.color.color)
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "point.topleft.down.curvedto.point.bottomright.up")
+                                                .font(.caption)
+                                                .foregroundColor(trip.color.color)
+                                            
+                                            Text("\(formatDistance(tripStatistics.distanceCovered))")
+                                                .font(.caption)
+                                                .foregroundColor(trip.color.color)
+                                        }
                                     }
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -316,7 +357,7 @@ struct TripDetailView: View {
                                             isFirst: index == 0,
                                             isLast: index == tripLocations.count - 1,
                                             onTap: {
-                                                selectedLocation = location // NEW: Set selected location
+                                                selectedLocation = location
                                             },
                                             onRemove: {
                                                 tripManager.removeLocationFromTrip(location.id, tripId: trip.id)
@@ -394,7 +435,6 @@ struct TripDetailView: View {
                 }
             }
         }
-        // NEW: Use TripRouteMapView instead of AllLocationsMapView
         .fullScreenCover(isPresented: $showingMapView) {
             TripRouteMapView(
                 trip: trip,
@@ -418,7 +458,6 @@ struct TripDetailView: View {
             )
         }
         .fullScreenCover(item: $selectedLocation) { location in
-            // NEW: Location detail view
             NavigationStack {
                 LocationDetailView(
                     dataManager: dataManager,
@@ -459,9 +498,9 @@ struct TripLocationRow: View {
     @State private var thumbnail: UIImage?
     
     var body: some View {
-        Button(action: onTap) { // NEW: Make entire row tappable
+        Button(action: onTap) {
             HStack(spacing: 16) {
-                // NEW: Enhanced step indicator with route context
+                // Enhanced step indicator with route context
                 VStack(spacing: 8) {
                     ZStack {
                         Circle()
@@ -486,7 +525,7 @@ struct TripLocationRow: View {
                         }
                     }
                     
-                    // NEW: Connection line to next location (except for last)
+                    // Connection line to next location (except for last)
                     if !isLast {
                         Rectangle()
                             .fill(tripColor.opacity(0.4))
@@ -514,7 +553,7 @@ struct TripLocationRow: View {
                 
                 // Location info
                 VStack(alignment: .leading, spacing: 4) {
-                    // NEW: Add route context to address
+                    // Add route context to address
                     HStack {
                         if isFirst {
                             Text("START")
@@ -596,13 +635,13 @@ struct TripLocationRow: View {
                 .buttonStyle(.plain)
             }
         }
-        .buttonStyle(.plain) // NEW: Use plain button style
+        .buttonStyle(.plain)
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.spotifyMediumGray.opacity(0.4))
                 .overlay(
-                    // NEW: Subtle border for route context
+                    // Subtle border for route context
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(tripColor.opacity(0.3), lineWidth: 1)
                 )
@@ -633,7 +672,7 @@ struct TripLocationRow: View {
     }
 }
 
-// MARK: - Edit Trip Sheet (Updated with Auto-Save Configuration)
+// MARK: - Enhanced Edit Trip Sheet with Trip Type Configuration
 struct EditTripSheet: View {
     let trip: Trip
     let onUpdate: (Trip) -> Void
@@ -752,7 +791,7 @@ struct EditTripSheet: View {
                                 }
                             }
                             
-                            // NEW: Auto-Save Configuration (only for active trips)
+                            // Enhanced Auto-Save Configuration (only for active trips)
                             if trip.isActive {
                                 VStack(spacing: 16) {
                                     // Auto-Save Toggle

@@ -139,7 +139,7 @@ struct ContentView: View {
                         .padding(.horizontal, 24)
                         .padding(.top, 20)
                         
-                        // Active Trip Banner with Auto-Save Indicator
+                        // Active Trip Banner with Enhanced Auto-Save Indicator
                         if let activeTrip = tripManager.activeTrip {
                             VStack(spacing: 12) {
                                 ActiveTripBanner(
@@ -153,9 +153,9 @@ struct ContentView: View {
                                     }
                                 )
                                 
-                                // Auto-Save Status Indicator
+                                // Enhanced Auto-Save Status Indicator with Trip Type
                                 if activeTrip.autoSaveConfig.isEnabled {
-                                    AutoSaveStatusView(
+                                    EnhancedAutoSaveStatusView(
                                         config: activeTrip.autoSaveConfig,
                                         isVisible: autoSaveIndicatorVisible,
                                         lastMessage: lastAutoSaveMessage
@@ -231,7 +231,7 @@ struct ContentView: View {
                             .disabled(locationManager.currentLocation == nil)
                             .padding(.horizontal, 24)
                             
-                            // UPDATED: Emergency Button - now checks the toggle setting instead of just hasEmergencyContact
+                            // Emergency Button - checks the toggle setting
                             if profileManager.shouldShowEmergencyButton() {
                                 Button(action: { showingEmergencySheet = true }) {
                                     HStack(spacing: 12) {
@@ -499,18 +499,43 @@ struct ContentView: View {
         formatter.timeStyle = .short
         let timeString = formatter.string(from: Date())
         
-        switch reason {
-        case "roadChange":
-            return "Auto-saved: Street change detected at \(timeString)"
-        case "timeInterval":
-            return "Auto-saved: Time interval at \(timeString)"
-        default:
-            return "Auto-saved at \(timeString)"
+        // Include trip type in auto-save comment if available
+        if let activeTrip = tripManager.activeTrip, activeTrip.autoSaveConfig.isEnabled {
+            let tripTypeInfo = activeTrip.autoSaveConfig.tripType != .custom ? " (\(activeTrip.autoSaveConfig.tripType.displayName))" : ""
+            
+            switch reason {
+            case "roadChange":
+                return "Auto-saved: Street change detected\(tripTypeInfo) at \(timeString)"
+            case "timeInterval":
+                return "Auto-saved: Time interval\(tripTypeInfo) at \(timeString)"
+            default:
+                return "Auto-saved\(tripTypeInfo) at \(timeString)"
+            }
+        } else {
+            switch reason {
+            case "roadChange":
+                return "Auto-saved: Street change detected at \(timeString)"
+            case "timeInterval":
+                return "Auto-saved: Time interval at \(timeString)"
+            default:
+                return "Auto-saved at \(timeString)"
+            }
         }
     }
     
     private func showAutoSaveFeedback(reason: String) {
-        let message = reason == "roadChange" ? "Location auto-saved (street change)" : "Location auto-saved (time interval)"
+        // Include trip type in feedback message
+        var message = ""
+        if let activeTrip = tripManager.activeTrip, activeTrip.autoSaveConfig.isEnabled && activeTrip.autoSaveConfig.tripType != .custom {
+            let tripTypeInfo = activeTrip.autoSaveConfig.tripType.displayName
+            message = reason == "roadChange" ?
+                "Location auto-saved (\(tripTypeInfo) - street change)" :
+                "Location auto-saved (\(tripTypeInfo) - time interval)"
+        } else {
+            message = reason == "roadChange" ?
+                "Location auto-saved (street change)" :
+                "Location auto-saved (time interval)"
+        }
         
         withAnimation(.easeInOut(duration: 0.3)) {
             lastAutoSaveMessage = message
@@ -908,7 +933,6 @@ struct EmergencyContactSheet: View {
                 }
             }
         }
-        // FIXED: Add the missing sheet presentation for message composer
         .sheet(isPresented: $showingMessageComposer) {
             MessageComposerView(
                 recipient: profileManager.getEmergencyContactMobile(),
@@ -1054,7 +1078,80 @@ struct MessageComposerView: UIViewControllerRepresentable {
     }
 }
 
-// MARK: - Auto-Save Status View
+// MARK: - Enhanced Auto-Save Status View with Trip Type Display
+struct EnhancedAutoSaveStatusView: View {
+    let config: AutoSaveConfiguration
+    let isVisible: Bool
+    let lastMessage: String
+    
+    var body: some View {
+        if isVisible {
+            HStack(spacing: 12) {
+                // Trip type icon instead of generic location icon
+                Image(systemName: config.tripType.icon)
+                    .font(.caption)
+                    .foregroundColor(.spotifyGreen)
+                
+                Text(lastMessage)
+                    .font(.caption)
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                // Enhanced auto-save settings indicator with trip type
+                HStack(spacing: 6) {
+                    // Trip type badge
+                    if config.tripType != .custom {
+                        HStack(spacing: 2) {
+                            Text(config.tripType.emoji)
+                                .font(.caption2)
+                            Text(config.tripType.displayName)
+                                .font(.caption2)
+                                .foregroundColor(.spotifyGreen)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.spotifyGreen.opacity(0.2))
+                        )
+                    }
+                    
+                    HStack(spacing: 4) {
+                        if config.saveOnRoadChange {
+                            Image(systemName: "road.lanes")
+                                .font(.caption2)
+                                .foregroundColor(.spotifyGreen)
+                        }
+                        
+                        if config.saveOnTimeInterval {
+                            Image(systemName: "timer")
+                                .font(.caption2)
+                                .foregroundColor(.spotifyGreen)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.spotifyGreen.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.spotifyGreen.opacity(0.3), lineWidth: 1)
+                    )
+            )
+            .padding(.horizontal, 24)
+            .transition(.asymmetric(
+                insertion: .move(edge: .top).combined(with: .opacity),
+                removal: .move(edge: .top).combined(with: .opacity)
+            ))
+        }
+    }
+}
+
+// MARK: - Legacy Auto-Save Status View (for backward compatibility)
 struct AutoSaveStatusView: View {
     let config: AutoSaveConfiguration
     let isVisible: Bool

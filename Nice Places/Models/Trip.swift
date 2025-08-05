@@ -15,7 +15,7 @@ struct Trip: Identifiable, Codable, Hashable, Equatable {
     var tripDescription: String?
     var color: TripColor // Visual identifier
     
-    // NEW: Auto-save configuration
+    // Auto-save configuration
     var autoSaveConfig: AutoSaveConfiguration
     
     // Trip categories
@@ -66,7 +66,7 @@ struct Trip: Identifiable, Codable, Hashable, Equatable {
         self.coverPhotoIdentifier = nil
         self.tripDescription = description
         self.color = color
-        self.autoSaveConfig = autoSaveConfig // NEW: Initialize with default config
+        self.autoSaveConfig = autoSaveConfig
     }
     
     // Initialize with existing data for retrospective trips
@@ -80,7 +80,7 @@ struct Trip: Identifiable, Codable, Hashable, Equatable {
         self.coverPhotoIdentifier = nil
         self.tripDescription = description
         self.color = color
-        self.autoSaveConfig = autoSaveConfig // NEW: Initialize with default config
+        self.autoSaveConfig = autoSaveConfig
     }
     
     // MARK: - Computed Properties
@@ -135,7 +135,7 @@ struct Trip: Identifiable, Codable, Hashable, Equatable {
         coverPhotoIdentifier = photoIdentifier
     }
     
-    // NEW: Update auto-save configuration
+    // Update auto-save configuration
     mutating func updateAutoSaveConfig(_ config: AutoSaveConfiguration) {
         autoSaveConfig = config
     }
@@ -150,7 +150,42 @@ struct Trip: Identifiable, Codable, Hashable, Equatable {
     }
 }
 
-// MARK: - NEW: Auto-Save Configuration
+// MARK: - NEW: Trip Type Enum
+enum TripType: String, CaseIterable, Codable {
+    case walking = "walking"
+    case bicycle = "bicycle"
+    case car = "car"
+    case custom = "custom"
+    
+    var displayName: String {
+        switch self {
+        case .walking: return "Walking"
+        case .bicycle: return "Bicycle"
+        case .car: return "Car"
+        case .custom: return "Custom"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .walking: return "figure.walk"
+        case .bicycle: return "bicycle"
+        case .car: return "car"
+        case .custom: return "gear"
+        }
+    }
+    
+    var emoji: String {
+        switch self {
+        case .walking: return "🚶"
+        case .bicycle: return "🚴"
+        case .car: return "🚗"
+        case .custom: return "⚙️"
+        }
+    }
+}
+
+// MARK: - Enhanced Auto-Save Configuration with Trip Type
 struct AutoSaveConfiguration: Codable, Equatable {
     var isEnabled: Bool
     var saveOnRoadChange: Bool
@@ -158,6 +193,7 @@ struct AutoSaveConfiguration: Codable, Equatable {
     var timeIntervalMinutes: Int
     var timeIntervalSeconds: Int
     var minimumDistanceMeters: Double // Minimum distance to travel before considering road change
+    var tripType: TripType // NEW: Store the selected trip type
     
     // Computed property for total interval in seconds
     var totalIntervalSeconds: TimeInterval {
@@ -171,7 +207,8 @@ struct AutoSaveConfiguration: Codable, Equatable {
         saveOnTimeInterval: Bool = false,
         timeIntervalMinutes: Int = 5,
         timeIntervalSeconds: Int = 0,
-        minimumDistanceMeters: Double = 100.0
+        minimumDistanceMeters: Double = 100.0,
+        tripType: TripType = .custom
     ) {
         self.isEnabled = isEnabled
         self.saveOnRoadChange = saveOnRoadChange
@@ -179,6 +216,7 @@ struct AutoSaveConfiguration: Codable, Equatable {
         self.timeIntervalMinutes = timeIntervalMinutes
         self.timeIntervalSeconds = timeIntervalSeconds
         self.minimumDistanceMeters = minimumDistanceMeters
+        self.tripType = tripType
     }
     
     // Validation helpers
@@ -204,14 +242,15 @@ struct AutoSaveConfiguration: Codable, Equatable {
         return saveOnRoadChange || saveOnTimeInterval // At least one method must be enabled
     }
     
-    // UPDATED: Preset configurations with new names
+    // UPDATED: Preset configurations with trip type information
     static let bicycle = AutoSaveConfiguration(
         isEnabled: true,
         saveOnRoadChange: true,
         saveOnTimeInterval: true,
         timeIntervalMinutes: 2,
         timeIntervalSeconds: 0,
-        minimumDistanceMeters: 150.0
+        minimumDistanceMeters: 150.0,
+        tripType: .bicycle
     )
     
     static let car = AutoSaveConfiguration(
@@ -220,7 +259,8 @@ struct AutoSaveConfiguration: Codable, Equatable {
         saveOnTimeInterval: true,
         timeIntervalMinutes: 5,
         timeIntervalSeconds: 0,
-        minimumDistanceMeters: 500.0
+        minimumDistanceMeters: 500.0,
+        tripType: .car
     )
     
     static let walking = AutoSaveConfiguration(
@@ -229,10 +269,25 @@ struct AutoSaveConfiguration: Codable, Equatable {
         saveOnTimeInterval: true,
         timeIntervalMinutes: 1,
         timeIntervalSeconds: 30,
-        minimumDistanceMeters: 75.0
+        minimumDistanceMeters: 75.0,
+        tripType: .walking
     )
     
-    static let disabled = AutoSaveConfiguration(isEnabled: false)
+    static let disabled = AutoSaveConfiguration(
+        isEnabled: false,
+        tripType: .custom
+    )
+    
+    // NEW: Helper to check if configuration matches a preset
+    func matchesPreset(_ preset: AutoSaveConfiguration) -> Bool {
+        return self.isEnabled == preset.isEnabled &&
+               self.saveOnRoadChange == preset.saveOnRoadChange &&
+               self.saveOnTimeInterval == preset.saveOnTimeInterval &&
+               self.timeIntervalMinutes == preset.timeIntervalMinutes &&
+               self.timeIntervalSeconds == preset.timeIntervalSeconds &&
+               abs(self.minimumDistanceMeters - preset.minimumDistanceMeters) < 1.0 &&
+               self.tripType == preset.tripType
+    }
 }
 
 // MARK: - Trip Statistics Helper

@@ -58,9 +58,9 @@ struct ActiveTripBanner: View {
                                 .fontWeight(.bold)
                                 .foregroundColor(trip.color.color)
                             
-                            // NEW: Auto-save indicator
+                            // Auto-save indicator with trip type
                             if trip.autoSaveConfig.isEnabled {
-                                Image(systemName: "location.fill.viewfinder")
+                                Image(systemName: trip.autoSaveConfig.tripType.icon)
                                     .font(.caption2)
                                     .foregroundColor(.spotifyGreen)
                             }
@@ -88,24 +88,17 @@ struct ActiveTripBanner: View {
                                 .foregroundColor(.white)
                         }
                         
-                        // NEW: Auto-save status
+                        // Enhanced auto-save status with trip type
                         if trip.autoSaveConfig.isEnabled {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Auto-save")
+                                Text("Mode")
                                     .font(.caption)
                                     .foregroundColor(.spotifyTextGray)
                                 
                                 HStack(spacing: 2) {
-                                    if trip.autoSaveConfig.saveOnRoadChange {
-                                        Image(systemName: "road.lanes")
-                                            .font(.caption2)
-                                            .foregroundColor(.spotifyGreen)
-                                    }
-                                    if trip.autoSaveConfig.saveOnTimeInterval {
-                                        Image(systemName: "timer")
-                                            .font(.caption2)
-                                            .foregroundColor(.spotifyGreen)
-                                    }
+                                    Text(trip.autoSaveConfig.tripType.displayName)
+                                        .font(.caption2)
+                                        .foregroundColor(.spotifyGreen)
                                 }
                             }
                         }
@@ -171,17 +164,17 @@ struct TripCard: View {
                                 .font(.caption)
                                 .foregroundColor(.spotifyTextGray)
                             
-                            // NEW: Auto-save indicator for completed trips
+                            // Enhanced auto-save indicator with trip type
                             if trip.autoSaveConfig.isEnabled {
                                 Text("•")
                                     .font(.caption)
                                     .foregroundColor(.spotifyTextGray)
                                 
-                                Image(systemName: "location.fill.viewfinder")
+                                Image(systemName: trip.autoSaveConfig.tripType.icon)
                                     .font(.caption)
                                     .foregroundColor(.spotifyGreen)
                                 
-                                Text("Auto")
+                                Text(trip.autoSaveConfig.tripType.displayName)
                                     .font(.caption)
                                     .foregroundColor(.spotifyGreen)
                             }
@@ -288,7 +281,7 @@ struct StatisticView: View {
     }
 }
 
-// MARK: - NEW: Enhanced Start Trip Sheet with Auto-Save Configuration
+// MARK: - Enhanced Start Trip Sheet with Trip Type Storage
 struct StartTripSheet: View {
     let onStartTrip: (String, String?, Trip.TripColor, AutoSaveConfiguration) -> Void
     
@@ -383,7 +376,7 @@ struct StartTripSheet: View {
                                 }
                             }
                             
-                            // NEW: Auto-Save Configuration Section
+                            // Enhanced Auto-Save Configuration Section
                             VStack(spacing: 16) {
                                 // Auto-Save Toggle
                                 HStack {
@@ -509,7 +502,7 @@ struct StartTripSheet: View {
     }
 }
 
-// MARK: - NEW: Auto-Save Configuration View
+// MARK: - Enhanced Auto-Save Configuration View with Trip Type Preservation
 struct AutoSaveConfigurationView: View {
     @Binding var config: AutoSaveConfiguration
     @Binding var isExpanded: Bool
@@ -531,6 +524,19 @@ struct AutoSaveConfigurationView: View {
                         Text("Configure auto-save settings")
                             .font(.subheadline)
                             .foregroundColor(.spotifyGreen)
+                        
+                        // Show current trip type if not custom
+                        if config.tripType != .custom {
+                            Spacer()
+                            
+                            HStack(spacing: 4) {
+                                Text(config.tripType.emoji)
+                                    .font(.caption)
+                                Text(config.tripType.displayName)
+                                    .font(.caption)
+                                    .foregroundColor(.spotifyGreen)
+                            }
+                        }
                         
                         Spacer()
                         
@@ -562,17 +568,31 @@ struct AutoSaveConfigurationView: View {
                         }
                     }
                     
-                    // Preset Buttons
-                    VStack(spacing: 8) {
-                        Text("Quick Presets")
-                            .font(.caption)
-                            .foregroundColor(.spotifyTextGray)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                    // Enhanced Preset Buttons with Trip Type Display
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("Trip Type")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                            
+                            Spacer()
+                            
+                            // Current trip type indicator
+                            HStack(spacing: 4) {
+                                Image(systemName: config.tripType.icon)
+                                    .font(.caption)
+                                    .foregroundColor(.spotifyGreen)
+                                Text(config.tripType.displayName)
+                                    .font(.caption)
+                                    .foregroundColor(.spotifyGreen)
+                            }
+                        }
                         
                         HStack(spacing: 8) {
-                            PresetButton(title: "Walking", preset: .walking, currentConfig: $config)
-                            PresetButton(title: "Bicycle", preset: .bicycle, currentConfig: $config)
-                            PresetButton(title: "Car", preset: .car, currentConfig: $config)
+                            EnhancedPresetButton(title: "Walking", emoji: "🚶", preset: .walking, currentConfig: $config)
+                            EnhancedPresetButton(title: "Bicycle", emoji: "🚴", preset: .bicycle, currentConfig: $config)
+                            EnhancedPresetButton(title: "Car", emoji: "🚗", preset: .car, currentConfig: $config)
                         }
                     }
                     
@@ -597,6 +617,12 @@ struct AutoSaveConfigurationView: View {
                             
                             Toggle("", isOn: $config.saveOnRoadChange)
                                 .tint(.spotifyGreen)
+                                .onChange(of: config.saveOnRoadChange) { _, newValue in
+                                    // When manually toggling, set to custom type
+                                    if !config.matchesPreset(.walking) && !config.matchesPreset(.bicycle) && !config.matchesPreset(.car) {
+                                        config.tripType = .custom
+                                    }
+                                }
                         }
                         
                         if config.saveOnRoadChange {
@@ -611,6 +637,12 @@ struct AutoSaveConfigurationView: View {
                                     step: 25
                                 )
                                 .tint(.spotifyGreen)
+                                .onChange(of: config.minimumDistanceMeters) { _, _ in
+                                    // When manually adjusting, set to custom type
+                                    if !config.matchesPreset(.walking) && !config.matchesPreset(.bicycle) && !config.matchesPreset(.car) {
+                                        config.tripType = .custom
+                                    }
+                                }
                             }
                         }
                     }
@@ -636,6 +668,12 @@ struct AutoSaveConfigurationView: View {
                             
                             Toggle("", isOn: $config.saveOnTimeInterval)
                                 .tint(.spotifyGreen)
+                                .onChange(of: config.saveOnTimeInterval) { _, newValue in
+                                    // When manually toggling, set to custom type
+                                    if !config.matchesPreset(.walking) && !config.matchesPreset(.bicycle) && !config.matchesPreset(.car) {
+                                        config.tripType = .custom
+                                    }
+                                }
                         }
                         
                         if config.saveOnTimeInterval {
@@ -652,6 +690,12 @@ struct AutoSaveConfigurationView: View {
                                     }
                                     .pickerStyle(.wheel)
                                     .frame(height: 80)
+                                    .onChange(of: config.timeIntervalMinutes) { _, _ in
+                                        // When manually adjusting, set to custom type
+                                        if !config.matchesPreset(.walking) && !config.matchesPreset(.bicycle) && !config.matchesPreset(.car) {
+                                            config.tripType = .custom
+                                        }
+                                    }
                                 }
                                 
                                 VStack(alignment: .leading, spacing: 8) {
@@ -666,6 +710,12 @@ struct AutoSaveConfigurationView: View {
                                     }
                                     .pickerStyle(.wheel)
                                     .frame(height: 80)
+                                    .onChange(of: config.timeIntervalSeconds) { _, _ in
+                                        // When manually adjusting, set to custom type
+                                        if !config.matchesPreset(.walking) && !config.matchesPreset(.bicycle) && !config.matchesPreset(.car) {
+                                            config.tripType = .custom
+                                        }
+                                    }
                                 }
                             }
                             
@@ -693,19 +743,52 @@ struct AutoSaveConfigurationView: View {
     }
 }
 
-// MARK: - NEW: Preset Button Helper
+// MARK: - Enhanced Preset Button with Trip Type Storage
+struct EnhancedPresetButton: View {
+    let title: String
+    let emoji: String
+    let preset: AutoSaveConfiguration
+    @Binding var currentConfig: AutoSaveConfiguration
+    
+    var isSelected: Bool {
+        currentConfig.matchesPreset(preset)
+    }
+    
+    var body: some View {
+        Button(action: {
+            // Apply the preset configuration including the trip type
+            currentConfig = preset
+        }) {
+            VStack(spacing: 6) {
+                Text(emoji)
+                    .font(.title2)
+                
+                Text(title)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(isSelected ? .black : .spotifyGreen)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isSelected ? Color.spotifyGreen : Color.spotifyGreen.opacity(0.2))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Legacy Preset Button (for backward compatibility)
 struct PresetButton: View {
     let title: String
     let preset: AutoSaveConfiguration
     @Binding var currentConfig: AutoSaveConfiguration
     
     var isSelected: Bool {
-        currentConfig.isEnabled == preset.isEnabled &&
-        currentConfig.saveOnRoadChange == preset.saveOnRoadChange &&
-        currentConfig.saveOnTimeInterval == preset.saveOnTimeInterval &&
-        currentConfig.timeIntervalMinutes == preset.timeIntervalMinutes &&
-        currentConfig.timeIntervalSeconds == preset.timeIntervalSeconds &&
-        abs(currentConfig.minimumDistanceMeters - preset.minimumDistanceMeters) < 1.0
+        currentConfig.matchesPreset(preset)
     }
     
     var body: some View {
@@ -845,7 +928,7 @@ struct TripAssignmentSheet: View {
     }
 }
 
-// MARK: - Trip Selection Row
+// MARK: - Enhanced Trip Selection Row with Trip Type Display
 struct TripSelectionRow: View {
     let trip: Trip
     let onSelect: () -> Void
@@ -888,15 +971,21 @@ struct TripSelectionRow: View {
                             .font(.caption)
                             .foregroundColor(.spotifyTextGray)
                         
-                        // Auto-save indicator
+                        // Enhanced auto-save indicator with trip type
                         if trip.autoSaveConfig.isEnabled {
                             Text("•")
                                 .font(.caption)
                                 .foregroundColor(.spotifyTextGray)
                             
-                            Image(systemName: "location.fill.viewfinder")
-                                .font(.caption)
-                                .foregroundColor(.spotifyGreen)
+                            HStack(spacing: 2) {
+                                Image(systemName: trip.autoSaveConfig.tripType.icon)
+                                    .font(.caption2)
+                                    .foregroundColor(.spotifyGreen)
+                                
+                                Text(trip.autoSaveConfig.tripType.displayName)
+                                    .font(.caption2)
+                                    .foregroundColor(.spotifyGreen)
+                            }
                         }
                     }
                 }
