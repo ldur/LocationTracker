@@ -502,7 +502,7 @@ struct StartTripSheet: View {
     }
 }
 
-// MARK: - Enhanced Auto-Save Configuration View with Trip Type Preservation
+// MARK: - FIXED: Auto-Save Configuration View - Preserves Trip Type
 struct AutoSaveConfigurationView: View {
     @Binding var config: AutoSaveConfiguration
     @Binding var isExpanded: Bool
@@ -599,7 +599,7 @@ struct AutoSaveConfigurationView: View {
                     Divider()
                         .background(Color.spotifyTextGray.opacity(0.3))
                     
-                    // Road Change Configuration
+                    // Road Change Configuration - FIXED: No automatic trip type change
                     VStack(spacing: 12) {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
@@ -617,12 +617,7 @@ struct AutoSaveConfigurationView: View {
                             
                             Toggle("", isOn: $config.saveOnRoadChange)
                                 .tint(.spotifyGreen)
-                                .onChange(of: config.saveOnRoadChange) { _, newValue in
-                                    // When manually toggling, set to custom type
-                                    if !config.matchesPreset(.walking) && !config.matchesPreset(.bicycle) && !config.matchesPreset(.car) {
-                                        config.tripType = .custom
-                                    }
-                                }
+                                // REMOVED: onChange that was setting tripType to .custom
                         }
                         
                         if config.saveOnRoadChange {
@@ -637,12 +632,7 @@ struct AutoSaveConfigurationView: View {
                                     step: 25
                                 )
                                 .tint(.spotifyGreen)
-                                .onChange(of: config.minimumDistanceMeters) { _, _ in
-                                    // When manually adjusting, set to custom type
-                                    if !config.matchesPreset(.walking) && !config.matchesPreset(.bicycle) && !config.matchesPreset(.car) {
-                                        config.tripType = .custom
-                                    }
-                                }
+                                // REMOVED: onChange that was setting tripType to .custom
                             }
                         }
                     }
@@ -650,7 +640,7 @@ struct AutoSaveConfigurationView: View {
                     Divider()
                         .background(Color.spotifyTextGray.opacity(0.3))
                     
-                    // Time Interval Configuration
+                    // Time Interval Configuration - FIXED: No automatic trip type change
                     VStack(spacing: 12) {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
@@ -668,12 +658,7 @@ struct AutoSaveConfigurationView: View {
                             
                             Toggle("", isOn: $config.saveOnTimeInterval)
                                 .tint(.spotifyGreen)
-                                .onChange(of: config.saveOnTimeInterval) { _, newValue in
-                                    // When manually toggling, set to custom type
-                                    if !config.matchesPreset(.walking) && !config.matchesPreset(.bicycle) && !config.matchesPreset(.car) {
-                                        config.tripType = .custom
-                                    }
-                                }
+                                // REMOVED: onChange that was setting tripType to .custom
                         }
                         
                         if config.saveOnTimeInterval {
@@ -690,12 +675,7 @@ struct AutoSaveConfigurationView: View {
                                     }
                                     .pickerStyle(.wheel)
                                     .frame(height: 80)
-                                    .onChange(of: config.timeIntervalMinutes) { _, _ in
-                                        // When manually adjusting, set to custom type
-                                        if !config.matchesPreset(.walking) && !config.matchesPreset(.bicycle) && !config.matchesPreset(.car) {
-                                            config.tripType = .custom
-                                        }
-                                    }
+                                    // REMOVED: onChange that was setting tripType to .custom
                                 }
                                 
                                 VStack(alignment: .leading, spacing: 8) {
@@ -710,12 +690,7 @@ struct AutoSaveConfigurationView: View {
                                     }
                                     .pickerStyle(.wheel)
                                     .frame(height: 80)
-                                    .onChange(of: config.timeIntervalSeconds) { _, _ in
-                                        // When manually adjusting, set to custom type
-                                        if !config.matchesPreset(.walking) && !config.matchesPreset(.bicycle) && !config.matchesPreset(.car) {
-                                            config.tripType = .custom
-                                        }
-                                    }
+                                    // REMOVED: onChange that was setting tripType to .custom
                                 }
                             }
                             
@@ -751,7 +726,7 @@ struct EnhancedPresetButton: View {
     @Binding var currentConfig: AutoSaveConfiguration
     
     var isSelected: Bool {
-        currentConfig.matchesPreset(preset)
+        currentConfig.tripType == preset.tripType
     }
     
     var body: some View {

@@ -1,4 +1,4 @@
-// /Managers/TripManager.swift
+// /Managers/TripManager.swift - FIXED Norwegian Street Name Extraction
 
 import Foundation
 import SwiftUI
@@ -180,7 +180,7 @@ class TripManager {
         )
     }
     
-    // NEW: Enhanced street-based road change detection
+    // FIXED: Enhanced street-based road change detection for Norwegian addresses
     func shouldAutoSaveLocation(_ newLocation: CLLocation, currentAddress: String) -> Bool {
         guard let activeTrip = self.activeTrip,
               activeTrip.autoSaveConfig.isEnabled,
@@ -188,10 +188,10 @@ class TripManager {
             return false
         }
         
-        // Extract current street name from address
-        let currentStreetName = extractStreetName(from: currentAddress)
+        // Extract current street name from address (Norwegian format)
+        let currentStreetName = extractNorwegianStreetName(from: currentAddress)
         
-        print("🚗 TripManager: Checking road change")
+        print("🚗 TripManager: Checking road change (Norwegian format)")
         print("🚗 Current street: '\(currentStreetName ?? "unknown")'")
         print("🚗 Last known street: '\(lastKnownStreetName ?? "none")'")
         print("🚗 Is first location: \(isFirstLocationOfTrip)")
@@ -209,7 +209,7 @@ class TripManager {
             return shouldAutoSaveBasedOnDistance(newLocation, config: activeTrip.autoSaveConfig)
         }
         
-        // Compare street names (case-insensitive)
+        // Compare street names (case-insensitive, ignoring house numbers)
         let streetChanged = !lastStreet.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
             .elementsEqual(currentStreet.lowercased().trimmingCharacters(in: .whitespacesAndNewlines))
         
@@ -218,60 +218,75 @@ class TripManager {
             return true
         }
         
-        print("🚗 TripManager: No street change detected")
+        print("🚗 TripManager: No street change detected (same street, different house number)")
         return false
     }
     
-    // NEW: Extract street name from address
-    private func extractStreetName(from address: String) -> String? {
-        // Address format is typically: "123 Main Street, City, State ZIP"
+    // FIXED: Extract street name from Norwegian address format
+    private func extractNorwegianStreetName(from address: String) -> String? {
+        // Norwegian address format: "Akersgata 40, 0123 Oslo" or "Grubbegata 1, Oslo"
         let components = address.components(separatedBy: ",")
         
         guard let streetComponent = components.first?.trimmingCharacters(in: .whitespacesAndNewlines),
               !streetComponent.isEmpty else {
+            print("🚗 TripManager: No street component found in: '\(address)'")
             return nil
         }
         
-        // Remove house number to get just the street name
+        print("🚗 TripManager: Processing street component: '\(streetComponent)'")
+        
+        // Split by spaces to separate street name from house number
         let streetParts = streetComponent.components(separatedBy: " ")
         
-        // If first part is a number, remove it to get the street name
-        if streetParts.count > 1,
-           let firstPart = streetParts.first,
-           firstPart.rangeOfCharacter(from: CharacterSet.decimalDigits) != nil {
-            // First part contains numbers (likely house number), take the rest
-            let streetName = streetParts.dropFirst().joined(separator: " ")
-            return streetName.isEmpty ? streetComponent : streetName
+        // Norwegian format: Street name comes first, house number comes last
+        // Examples: "Akersgata 40", "Karl Johans gate 22", "Storgata 15B"
+        
+        guard streetParts.count > 1 else {
+            // Only one part - could be just street name without house number
+            print("🚗 TripManager: Single part street component: '\(streetComponent)'")
+            return streetComponent
         }
         
-        // No house number detected, return the full street component
-        return streetComponent
+        // Check if the last part contains numbers (house number)
+        let lastPart = streetParts.last!
+        let hasNumbers = lastPart.rangeOfCharacter(from: CharacterSet.decimalDigits) != nil
+        
+        if hasNumbers {
+            // Last part has numbers (likely house number), take everything except the last part
+            let streetName = streetParts.dropLast().joined(separator: " ")
+            print("🚗 TripManager: Extracted Norwegian street name: '\(streetName)' (removed house number: '\(lastPart)')")
+            return streetName.isEmpty ? streetComponent : streetName
+        } else {
+            // No clear house number pattern, return the full street component
+            print("🚗 TripManager: No clear house number found, using full component: '\(streetComponent)'")
+            return streetComponent
+        }
     }
     
-    // NEW: Fallback distance-based detection when street names can't be determined
+    // ENHANCED: Better distance-based detection when street names can't be determined
     private func shouldAutoSaveBasedOnDistance(_ newLocation: CLLocation, config: AutoSaveConfiguration) -> Bool {
-        // This is a fallback when we can't extract street names
-        // Use the minimum distance setting as a threshold
+        print("🚗 TripManager: Using distance-based fallback for road change detection")
         
         // For the first location, always save
         if isFirstLocationOfTrip {
+            print("🚗 TripManager: First location of trip (distance fallback) - auto-saving")
             return true
         }
         
-        // Check if we have sufficient location data
-        // This is a simplified fallback - you might want to implement more sophisticated logic
-        print("🚗 TripManager: Using distance-based fallback for road change detection")
-        return false // For now, only rely on street name comparison
+        // This could be enhanced to track the last saved location and compare distances
+        // For now, we'll be conservative and not auto-save unless we can detect street changes
+        print("🚗 TripManager: Distance-based fallback - no auto-save (conservative approach)")
+        return false
     }
     
-    // NEW: Update auto-save state after successful save
+    // FIXED: Update auto-save state after successful save (with Norwegian street extraction)
     func didAutoSaveLocation(_ location: CLLocation, address: String) {
-        // Extract and store the street name for future comparison
-        lastKnownStreetName = extractStreetName(from: address)
+        // Extract and store the street name for future comparison (Norwegian format)
+        lastKnownStreetName = extractNorwegianStreetName(from: address)
         lastAutoSaveTime = Date()
         isFirstLocationOfTrip = false
         
-        print("🚗 TripManager: Auto-save state updated")
+        print("🚗 TripManager: Auto-save state updated (Norwegian format)")
         print("🚗 Stored street name: '\(lastKnownStreetName ?? "unknown")'")
         print("🚗 First location flag cleared")
     }

@@ -672,7 +672,7 @@ struct TripLocationRow: View {
     }
 }
 
-// MARK: - Enhanced Edit Trip Sheet with Trip Type Configuration
+// MARK: - FIXED: Edit Trip Sheet - Preserves Trip Type
 struct EditTripSheet: View {
     let trip: Trip
     let onUpdate: (Trip) -> Void
@@ -791,7 +791,7 @@ struct EditTripSheet: View {
                                 }
                             }
                             
-                            // Enhanced Auto-Save Configuration (only for active trips)
+                            // Enhanced Auto-Save Configuration (only for active trips) - FIXED
                             if trip.isActive {
                                 VStack(spacing: 16) {
                                     // Auto-Save Toggle
@@ -813,13 +813,154 @@ struct EditTripSheet: View {
                                             .tint(.spotifyGreen)
                                     }
                                     
-                                    // Auto-Save Configuration (when enabled)
+                                    // Auto-Save Configuration (when enabled) - FIXED VERSION
                                     if autoSaveConfig.isEnabled {
-                                        AutoSaveConfigurationView(config: $autoSaveConfig, isExpanded: $showAutoSaveConfig)
-                                            .transition(.asymmetric(
-                                                insertion: .move(edge: .top).combined(with: .opacity),
-                                                removal: .move(edge: .top).combined(with: .opacity)
-                                            ))
+                                        VStack(spacing: 16) {
+                                            // Trip Type Selection with Presets
+                                            VStack(spacing: 12) {
+                                                HStack {
+                                                    Text("Trip Type")
+                                                        .font(.subheadline)
+                                                        .fontWeight(.medium)
+                                                        .foregroundColor(.white)
+                                                    
+                                                    Spacer()
+                                                    
+                                                    // Current trip type indicator
+                                                    HStack(spacing: 4) {
+                                                        Image(systemName: autoSaveConfig.tripType.icon)
+                                                            .font(.caption)
+                                                            .foregroundColor(.spotifyGreen)
+                                                        Text(autoSaveConfig.tripType.displayName)
+                                                            .font(.caption)
+                                                            .foregroundColor(.spotifyGreen)
+                                                    }
+                                                }
+                                                
+                                                HStack(spacing: 8) {
+                                                    EnhancedPresetButton(title: "Walking", emoji: "🚶", preset: .walking, currentConfig: $autoSaveConfig)
+                                                    EnhancedPresetButton(title: "Bicycle", emoji: "🚴", preset: .bicycle, currentConfig: $autoSaveConfig)
+                                                    EnhancedPresetButton(title: "Car", emoji: "🚗", preset: .car, currentConfig: $autoSaveConfig)
+                                                }
+                                            }
+                                            
+                                            Divider()
+                                                .background(Color.spotifyTextGray.opacity(0.3))
+                                            
+                                            // Road Change Configuration - FIXED: No automatic trip type change
+                                            VStack(spacing: 12) {
+                                                HStack {
+                                                    VStack(alignment: .leading, spacing: 4) {
+                                                        Text("Save on Road Change")
+                                                            .font(.subheadline)
+                                                            .fontWeight(.medium)
+                                                            .foregroundColor(.white)
+                                                        
+                                                        Text("Automatically save when moving to different streets")
+                                                            .font(.caption)
+                                                            .foregroundColor(.spotifyTextGray)
+                                                    }
+                                                    
+                                                    Spacer()
+                                                    
+                                                    Toggle("", isOn: $autoSaveConfig.saveOnRoadChange)
+                                                        .tint(.spotifyGreen)
+                                                        // REMOVED: onChange that was setting tripType to .custom
+                                                }
+                                                
+                                                if autoSaveConfig.saveOnRoadChange {
+                                                    VStack(alignment: .leading, spacing: 8) {
+                                                        Text("Minimum Distance: \(Int(autoSaveConfig.minimumDistanceMeters))m")
+                                                            .font(.caption)
+                                                            .foregroundColor(.spotifyTextGray)
+                                                        
+                                                        Slider(
+                                                            value: $autoSaveConfig.minimumDistanceMeters,
+                                                            in: 50...1000,
+                                                            step: 25
+                                                        )
+                                                        .tint(.spotifyGreen)
+                                                        // REMOVED: onChange that was setting tripType to .custom
+                                                    }
+                                                }
+                                            }
+                                            
+                                            Divider()
+                                                .background(Color.spotifyTextGray.opacity(0.3))
+                                            
+                                            // Time Interval Configuration - FIXED: No automatic trip type change
+                                            VStack(spacing: 12) {
+                                                HStack {
+                                                    VStack(alignment: .leading, spacing: 4) {
+                                                        Text("Save on Time Interval")
+                                                            .font(.subheadline)
+                                                            .fontWeight(.medium)
+                                                            .foregroundColor(.white)
+                                                        
+                                                        Text("Automatically save at regular time intervals")
+                                                            .font(.caption)
+                                                            .foregroundColor(.spotifyTextGray)
+                                                    }
+                                                    
+                                                    Spacer()
+                                                    
+                                                    Toggle("", isOn: $autoSaveConfig.saveOnTimeInterval)
+                                                        .tint(.spotifyGreen)
+                                                        // REMOVED: onChange that was setting tripType to .custom
+                                                }
+                                                
+                                                if autoSaveConfig.saveOnTimeInterval {
+                                                    HStack(spacing: 16) {
+                                                        VStack(alignment: .leading, spacing: 8) {
+                                                            Text("Minutes")
+                                                                .font(.caption)
+                                                                .foregroundColor(.spotifyTextGray)
+                                                            
+                                                            Picker("Minutes", selection: $autoSaveConfig.timeIntervalMinutes) {
+                                                                ForEach(0...59, id: \.self) { minute in
+                                                                    Text("\(minute)").tag(minute)
+                                                                }
+                                                            }
+                                                            .pickerStyle(.wheel)
+                                                            .frame(height: 80)
+                                                            // REMOVED: onChange that was setting tripType to .custom
+                                                        }
+                                                        
+                                                        VStack(alignment: .leading, spacing: 8) {
+                                                            Text("Seconds")
+                                                                .font(.caption)
+                                                                .foregroundColor(.spotifyTextGray)
+                                                            
+                                                            Picker("Seconds", selection: $autoSaveConfig.timeIntervalSeconds) {
+                                                                ForEach([0, 15, 30, 45], id: \.self) { second in
+                                                                    Text("\(second)").tag(second)
+                                                                }
+                                                            }
+                                                            .pickerStyle(.wheel)
+                                                            .frame(height: 80)
+                                                            // REMOVED: onChange that was setting tripType to .custom
+                                                        }
+                                                    }
+                                                    
+                                                    // Time validation
+                                                    if !autoSaveConfig.isValidTimeInterval {
+                                                        HStack {
+                                                            Image(systemName: "exclamationmark.triangle")
+                                                                .font(.caption)
+                                                                .foregroundColor(.orange)
+                                                            
+                                                            Text("Time interval must be between 30 seconds and 1 hour")
+                                                                .font(.caption)
+                                                                .foregroundColor(.orange)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        .transition(.asymmetric(
+                                            insertion: .move(edge: .top).combined(with: .opacity),
+                                            removal: .move(edge: .top).combined(with: .opacity)
+                                        ))
                                     }
                                 }
                                 .padding(16)
@@ -866,11 +1007,23 @@ struct EditTripSheet: View {
 #Preview {
     let sampleTrip = Trip(name: "Weekend Adventure", description: "Exploring the city", color: .green)
     
-    TripDetailView(
+    let sampleLocations = [
+        LocationData(
+            address: "Apple Park, Cupertino, CA",
+            coordinate: CLLocationCoordinate2D(latitude: 37.3349, longitude: -122.0090),
+            altitude: 56.7,
+            comment: "Amazing place!",
+            photoIdentifiers: ["photo1", "photo2"]
+        )
+    ]
+    
+    let sampleStats = TripStatistics(trip: sampleTrip, locations: sampleLocations)
+    
+    TripCard(
         trip: sampleTrip,
-        tripManager: TripManager(),
-        dataManager: DataManager(),
-        onDismiss: {}
+        statistics: sampleStats,
+        onTap: {}
     )
     .preferredColorScheme(.dark)
+    .padding()
 }
