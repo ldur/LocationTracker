@@ -3,6 +3,7 @@
 import SwiftUI
 import CoreLocation
 import MapKit
+import MessageUI
 
 struct ContentView: View {
     @State private var locationManager = LocationManager()
@@ -26,6 +27,11 @@ struct ContentView: View {
     // NEW: Auto-save state
     @State private var autoSaveIndicatorVisible = false
     @State private var lastAutoSaveMessage = ""
+    
+    // NEW: Emergency functionality state
+    @State private var showingEmergencySheet = false
+    @State private var showingMessageComposer = false
+    @State private var emergencyPulse = false
     
     var body: some View {
         NavigationStack {
@@ -60,6 +66,26 @@ struct ContentView: View {
                                 }
                                 
                                 Spacer()
+                                
+                                // NEW: Emergency button (top right)
+                                if profileManager.hasEmergencyContact() {
+                                    Button(action: { showingEmergencySheet = true }) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(Color.red)
+                                                .frame(width: 44, height: 44)
+                                                .scaleEffect(emergencyPulse ? 1.1 : 1.0)
+                                                .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: emergencyPulse)
+                                            
+                                            Image(systemName: "phone.fill")
+                                                .font(.headline)
+                                                .foregroundColor(.white)
+                                        }
+                                    }
+                                    .onAppear {
+                                        emergencyPulse = true
+                                    }
+                                }
                                 
                                 // Profile button
                                 Button(action: {
@@ -226,6 +252,28 @@ struct ContentView: View {
                             .disabled(locationManager.currentLocation == nil)
                             .padding(.horizontal, 24)
                             
+                            // NEW: Emergency Button (if emergency contact is set up)
+                            if profileManager.hasEmergencyContact() {
+                                Button(action: { showingEmergencySheet = true }) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "phone.circle.fill")
+                                            .font(.title2)
+                                        
+                                        Text("Emergency Contact")
+                                            .font(.headline)
+                                            .fontWeight(.semibold)
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 56)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 28)
+                                            .fill(Color.red)
+                                    )
+                                }
+                                .padding(.horizontal, 24)
+                            }
+                            
                             // View Saved Locations Button
                             Button(action: { showingSavedLocations = true }) {
                                 HStack(spacing: 12) {
@@ -378,6 +426,25 @@ struct ContentView: View {
             }
             .onChange(of: showingProfileView) { _, newValue in
                 print("📞 ContentView: ProfileView sheet state changed to: \(newValue)")
+            }
+            // NEW: Emergency Contact Sheet
+            .sheet(isPresented: $showingEmergencySheet) {
+                EmergencyContactSheet(
+                    profileManager: profileManager,
+                    currentLocation: locationManager.currentLocation,
+                    currentAddress: locationManager.currentAddress,
+                    onDismiss: { showingEmergencySheet = false }
+                )
+            }
+            // NEW: Message Composer
+            .sheet(isPresented: $showingMessageComposer) {
+                MessageComposerView(
+                    recipient: profileManager.getEmergencyContactMobile(),
+                    recipientName: profileManager.getEmergencyContactName(),
+                    currentLocation: locationManager.currentLocation,
+                    currentAddress: locationManager.currentAddress,
+                    userName: profileManager.getDisplayName()
+                )
             }
         }
     }
@@ -675,6 +742,401 @@ struct ContentView: View {
             }
             
             topController.present(activityVC, animated: true)
+        }
+    }
+}
+
+// MARK: - NEW: Emergency Contact Sheet
+struct EmergencyContactSheet: View {
+    let profileManager: ProfileManager
+    let currentLocation: CLLocation?
+    let currentAddress: String
+    let onDismiss: () -> Void
+    
+    @State private var showingMessageComposer = false
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                LinearGradient(
+                    colors: [Color.red.opacity(0.1), Color.spotifyDarkGray, Color.black],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+                
+                VStack(spacing: 32) {
+                    // Header
+                    VStack(spacing: 16) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 80, height: 80)
+                            
+                            Image(systemName: "phone.fill")
+                                .font(.system(size: 32))
+                                .foregroundColor(.white)
+                        }
+                        
+                        VStack(spacing: 8) {
+                            Text("Emergency Contact")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            Text("Contact your emergency person")
+                                .font(.subheadline)
+                                .foregroundColor(.spotifyTextGray)
+                        }
+                    }
+                    .padding(.top, 20)
+                    
+                    // Emergency Contact Info
+                    VStack(spacing: 16) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Emergency Contact")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.spotifyTextGray)
+                                
+                                Text(profileManager.getEmergencyContactName())
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
+                                
+                                Text(profileManager.getEmergencyContactMobile())
+                                    .font(.subheadline)
+                                    .foregroundColor(.spotifyTextGray)
+                                    .monospaced()
+                            }
+                            
+                            Spacer()
+                            
+                            Image(systemName: "person.circle.fill")
+                                .font(.system(size: 50))
+                                .foregroundColor(.red)
+                        }
+                        
+                        if let location = currentLocation {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Your Current Location")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.spotifyTextGray)
+                                
+                                Text(currentAddress)
+                                    .font(.subheadline)
+                                    .foregroundColor(.white)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                
+                                Text("Lat: \(String(format: "%.6f", location.coordinate.latitude)), Long: \(String(format: "%.6f", location.coordinate.longitude))")
+                                    .font(.caption)
+                                    .foregroundColor(.spotifyTextGray)
+                                    .monospaced()
+                            }
+                        }
+                    }
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.spotifyMediumGray.opacity(0.8))
+                    )
+                    .padding(.horizontal, 24)
+                    
+                    // Action Buttons
+                    VStack(spacing: 16) {
+                        // Call Button
+                        Button(action: makePhoneCall) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "phone.fill")
+                                    .font(.title2)
+                                
+                                Text("Call Emergency Contact")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(
+                                RoundedRectangle(cornerRadius: 28)
+                                    .fill(Color.red)
+                            )
+                        }
+                        .padding(.horizontal, 24)
+                        
+                        // SMS Button
+                        Button(action: sendEmergencySMS) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "message.fill")
+                                    .font(.title2)
+                                
+                                Text("Send Location via SMS")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(.black)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(
+                                RoundedRectangle(cornerRadius: 28)
+                                    .fill(Color.orange)
+                            )
+                        }
+                        .padding(.horizontal, 24)
+                        
+                        // Share Location Button
+                        if currentLocation != nil {
+                            Button(action: shareEmergencyLocation) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "square.and.arrow.up")
+                                        .font(.title2)
+                                    
+                                    Text("Share My Location")
+                                        .font(.headline)
+                                        .fontWeight(.semibold)
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 28)
+                                        .fill(Color.spotifyGreen)
+                                )
+                            }
+                            .padding(.horizontal, 24)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // Emergency Info
+                    VStack(spacing: 8) {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                            
+                            Text("Emergency Information")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.red)
+                            
+                            Spacer()
+                        }
+                        
+                        Text("Use these buttons to quickly contact your emergency contact. Your current location will be shared automatically when sending messages.")
+                            .font(.caption)
+                            .foregroundColor(.spotifyTextGray)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.red.opacity(0.1))
+                    )
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 20)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        onDismiss()
+                    }
+                    .foregroundColor(.white)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Emergency Actions
+    private func makePhoneCall() {
+        let phoneNumber = profileManager.getEmergencyContactMobile()
+        let cleanedNumber = phoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        
+        if let phoneURL = URL(string: "tel://\(cleanedNumber)") {
+            if UIApplication.shared.canOpenURL(phoneURL) {
+                UIApplication.shared.open(phoneURL)
+                
+                // Strong haptic feedback for emergency action
+                let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
+                impactFeedback.impactOccurred()
+            }
+        }
+        
+        onDismiss()
+    }
+    
+    private func sendEmergencySMS() {
+        guard MFMessageComposeViewController.canSendText() else {
+            // Fallback to regular SMS app
+            sendSMSFallback()
+            return
+        }
+        
+        showingMessageComposer = true
+    }
+    
+    private func sendSMSFallback() {
+        let phoneNumber = profileManager.getEmergencyContactMobile()
+        let cleanedNumber = phoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        
+        var message = "🚨 EMERGENCY: I need help! "
+        
+        if let location = currentLocation {
+            let coordinate = location.coordinate
+            let encodedAddress = currentAddress.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            let appleMapURL = "http://maps.apple.com/?ll=\(coordinate.latitude),\(coordinate.longitude)&q=\(encodedAddress)"
+            
+            message += "My location: \(currentAddress) - \(appleMapURL)"
+        } else {
+            message += "I cannot share my exact location right now."
+        }
+        
+        message = message.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? message
+        
+        if let smsURL = URL(string: "sms:\(cleanedNumber)&body=\(message)") {
+            if UIApplication.shared.canOpenURL(smsURL) {
+                UIApplication.shared.open(smsURL)
+                
+                // Strong haptic feedback for emergency action
+                let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
+                impactFeedback.impactOccurred()
+            }
+        }
+        
+        onDismiss()
+    }
+    
+    private func shareEmergencyLocation() {
+        guard let location = currentLocation else { return }
+        
+        let userName = profileManager.getDisplayName()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd.MM.yyyy - HH:mm"
+        let timestamp = formatter.string(from: Date())
+        
+        let coordinate = location.coordinate
+        let encodedAddress = currentAddress.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let appleMapURL = "http://maps.apple.com/?ll=\(coordinate.latitude),\(coordinate.longitude)&q=\(encodedAddress)"
+        
+        let shareText = """
+        🚨 EMERGENCY LOCATION SHARE
+        
+        \(userName) is sharing their location for safety
+        
+        Time: \(timestamp)
+        
+        \(currentAddress)
+        
+        Emergency Contact: \(profileManager.getEmergencyContactName())
+        
+        📱 Shared from Nice Places app
+        """
+        
+        let activityItems: [Any] = [shareText, URL(string: appleMapURL)!]
+        
+        let activityVC = UIActivityViewController(
+            activityItems: activityItems,
+            applicationActivities: nil
+        )
+        
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = UIApplication.shared.windows.first
+            popover.sourceRect = CGRect(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let rootViewController = window.rootViewController {
+            
+            var topController = rootViewController
+            while let presentedController = topController.presentedViewController {
+                topController = presentedController
+            }
+            
+            topController.present(activityVC, animated: true)
+        }
+        
+        onDismiss()
+    }
+}
+
+// MARK: - NEW: Message Composer View
+struct MessageComposerView: UIViewControllerRepresentable {
+    let recipient: String
+    let recipientName: String
+    let currentLocation: CLLocation?
+    let currentAddress: String
+    let userName: String
+    
+    func makeUIViewController(context: Context) -> MFMessageComposeViewController {
+        let composer = MFMessageComposeViewController()
+        composer.messageComposeDelegate = context.coordinator
+        
+        // Set recipient
+        composer.recipients = [recipient]
+        
+        // Create emergency message with location
+        var message = "🚨 EMERGENCY: \(userName) needs help!\n\n"
+        
+        if let location = currentLocation {
+            let coordinate = location.coordinate
+            let encodedAddress = currentAddress.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            let appleMapURL = "http://maps.apple.com/?ll=\(coordinate.latitude),\(coordinate.longitude)&q=\(encodedAddress)"
+            
+            let formatter = DateFormatter()
+            formatter.dateFormat = "dd.MM.yyyy - HH:mm"
+            let timestamp = formatter.string(from: Date())
+            
+            message += "Time: \(timestamp)\n\n"
+            message += "Location: \(currentAddress)\n\n"
+            message += "Map: \(appleMapURL)\n\n"
+            message += "📱 Sent from Nice Places emergency feature"
+        } else {
+            message += "I cannot share my exact location right now, but I need assistance.\n\n"
+            message += "📱 Sent from Nice Places emergency feature"
+        }
+        
+        composer.body = message
+        
+        return composer
+    }
+    
+    func updateUIViewController(_ uiViewController: MFMessageComposeViewController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, MFMessageComposeViewControllerDelegate {
+        let parent: MessageComposerView
+        
+        init(_ parent: MessageComposerView) {
+            self.parent = parent
+        }
+        
+        func messageComposeViewController(_ controller: MFMessageComposeViewController, didFinishWith result: MessageComposeResult) {
+            controller.dismiss(animated: true)
+            
+            // Provide haptic feedback based on result
+            switch result {
+            case .sent:
+                let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
+                impactFeedback.impactOccurred()
+                print("🚨 Emergency SMS sent successfully")
+            case .cancelled:
+                print("🚨 Emergency SMS cancelled")
+            case .failed:
+                print("🚨 Emergency SMS failed to send")
+            @unknown default:
+                break
+            }
         }
     }
 }
