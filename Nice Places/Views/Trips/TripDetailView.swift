@@ -13,6 +13,10 @@ struct TripDetailView: View {
     @State private var showingEditSheet = false
     @State private var selectedLocation: LocationData?
     @State private var photoManager = PhotoManager()
+    @State private var showingNavigationLauncher = false
+    @State private var showingNavigation = false
+    @State private var navigationStartIndex = 0
+
     
     private var tripLocations: [LocationData] {
         tripManager.getLocationsForTrip(trip, from: dataManager.savedLocations)
@@ -278,6 +282,24 @@ struct TripDetailView: View {
                                     )
                                 }
                                 .padding(.horizontal, 24)
+                                Button(action: { showingNavigationLauncher = true }) {
+                                        HStack(spacing: 12) {
+                                            Image(systemName: "location.north.circle.fill")
+                                                .font(.title2)
+                                            
+                                            Text("Navigate Trip")
+                                                .font(.headline)
+                                                .fontWeight(.semibold)
+                                        }
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 56)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 28)
+                                                .fill(Color.blue)
+                                        )
+                                    }
+                                    .padding(.horizontal, 24)
                             }
                             
                             // Edit Trip
@@ -472,6 +494,30 @@ struct TripDetailView: View {
                     }
                 }
             }
+        }
+        .sheet(isPresented: $showingNavigationLauncher) {
+            NavigationLauncherSheet(
+                trip: trip,
+                locations: tripLocations,
+                onStartNavigation: { startIndex in
+                    navigationStartIndex = startIndex
+                    showingNavigationLauncher = false
+                    showingNavigation = true
+                },
+                onDismiss: {
+                    showingNavigationLauncher = false
+                }
+            )
+        }
+        .fullScreenCover(isPresented: $showingNavigation) {
+            TripNavigationView(
+                trip: trip,
+                locations: tripLocations,
+                startLocationIndex: navigationStartIndex,
+                onDismiss: {
+                    showingNavigation = false
+                }
+            )
         }
     }
     

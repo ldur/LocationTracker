@@ -50,10 +50,11 @@
 		<string>map</string>
 		<string>comgooglemaps</string>
 	</array>
-    <key>NSContactsUsageDescription</key>
-    <string>Nice Places can access your contacts to help you easily select emergency contact information. This information may be used for safety features when sharing locations.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Nice Places can access your contacts to help you easily select emergency contact information. This information may be used for safety features when sharing locations.</string>
 	<key>UIBackgroundModes</key>
 	<array>
+        <string>location</string>
 		<string>audio</string>
 	</array>
 	<key>UIInterfaceOrientation</key>
