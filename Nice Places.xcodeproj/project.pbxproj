@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		6A33BEB12E40BB8F002C718C /* Nice-Places-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6A33BEB02E40BB8F002C718C /* Nice-Places-Info.plist */; };
 		6A33BEFE2E436258002C718C /* Claudeinstructions.txt in Resources */ = {isa = PBXBuildFile; fileRef = 6A33BEFD2E43623F002C718C /* Claudeinstructions.txt */; };
-		6A33BF002E436280002C718C /* Untitled.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A33BEFF2E436264002C718C /* Untitled.swift */; };
 		6A33BF022E43629E002C718C /* Nice Places App - Architecture Summary.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 6A33BF012E43629E002C718C /* Nice Places App - Architecture Summary.pdf */; };
 		6AFD844F2E3A7FE800B175CE /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6AFD844E2E3A7FE800B175CE /* CoreLocation.framework */; };
 		6AFD84512E3A7FEF00B175CE /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6AFD84502E3A7FEF00B175CE /* MapKit.framework */; };
@@ -36,7 +35,6 @@
 /* Begin PBXFileReference section */
 		6A33BEB02E40BB8F002C718C /* Nice-Places-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Nice-Places-Info.plist"; sourceTree = "<group>"; };
 		6A33BEFD2E43623F002C718C /* Claudeinstructions.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Claudeinstructions.txt; sourceTree = "<group>"; };
-		6A33BEFF2E436264002C718C /* Untitled.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Untitled.swift; sourceTree = "<group>"; };
 		6A33BF012E43629E002C718C /* Nice Places App - Architecture Summary.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "Nice Places App - Architecture Summary.pdf"; sourceTree = "<group>"; };
 		6A6DE3C92E3A524E00474379 /* Nice Places.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Nice Places.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6A6DE3D82E3A524F00474379 /* Nice PlacesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Nice PlacesTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -96,7 +94,6 @@
 			children = (
 				6A33BF012E43629E002C718C /* Nice Places App - Architecture Summary.pdf */,
 				6A33BEFD2E43623F002C718C /* Claudeinstructions.txt */,
-				6A33BEFF2E436264002C718C /* Untitled.swift */,
 				6A33BEB02E40BB8F002C718C /* Nice-Places-Info.plist */,
 				6AFD84602E3B7A1300B175CE /* .gitignore */,
 				6A6DE3CB2E3A524E00474379 /* Nice Places */,
@@ -274,7 +271,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6A33BF002E436280002C718C /* Untitled.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
