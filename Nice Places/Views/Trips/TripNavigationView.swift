@@ -132,7 +132,7 @@ struct TripNavigationView: View {
 
 // MARK: - Navigation Map View
 struct NavigationMapView: View {
-    @ObservedObject var navigationManager: NavigationManager
+    var navigationManager: NavigationManager
     @Binding var cameraPosition: MapCameraPosition
     @Binding var isFollowingUser: Bool
     @Binding var mapRotation: Double
@@ -159,12 +159,11 @@ struct NavigationMapView: View {
                 
                 // Alternative style for better visibility
                 MapPolyline(route.polyline)
-                    .stroke(.white, style: StrokeStyle(
+                    .stroke(.white.opacity(0.5), style: StrokeStyle(
                         lineWidth: 10,
                         lineCap: .round,
                         lineJoin: .round
                     ))
-                    .opacity(0.5)
             }
             
             // Destination Markers
@@ -298,7 +297,7 @@ struct NavigationLocationMarker: View {
 
 // MARK: - Navigation Top Bar
 struct NavigationTopBar: View {
-    @ObservedObject var navigationManager: NavigationManager
+    var navigationManager: NavigationManager
     let onExit: () -> Void
     let onToggleOverview: () -> Void
     let onRecenter: () -> Void
@@ -399,7 +398,7 @@ struct NavigationTopBar: View {
 
 // MARK: - Navigation Instruction Panel
 struct NavigationInstructionPanel: View {
-    @ObservedObject var navigationManager: NavigationManager
+    var navigationManager: NavigationManager
     let trip: Trip
     @Binding var showFullInstructions: Bool
     let onSkipLocation: () -> Void
@@ -577,7 +576,7 @@ struct NavigationTurnIcon: View {
 
 // MARK: - Navigation Route Overview
 struct NavigationRouteOverview: View {
-    @ObservedObject var navigationManager: NavigationManager
+    var navigationManager: NavigationManager
     let trip: Trip
     let locations: [LocationData]
     

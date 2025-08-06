@@ -161,16 +161,6 @@ struct ContentView: View {
                                         lastMessage: lastAutoSaveMessage
                                     )
                                 }
-                                // Add navigation button for active trips with locations
-                                if activeTrip.locationIds.count > 1 {
-                                    Button(action: {
-                                        showingNavigationForActiveTrip = true
-                                    }) {
-                                        Image(systemName: "location.north.fill")
-                                            .font(.caption)
-                                            .foregroundColor(.spotifyGreen)
-                                    }
-                                }
                                 // Debug info (remove in production)
                                 #if DEBUG
                                 if activeTrip.autoSaveConfig.isEnabled {
