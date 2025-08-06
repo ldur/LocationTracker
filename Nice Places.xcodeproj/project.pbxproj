@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6A33BEB12E40BB8F002C718C /* Nice-Places-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6A33BEB02E40BB8F002C718C /* Nice-Places-Info.plist */; };
+		6A33BEFE2E436258002C718C /* Claudeinstructions.txt in Resources */ = {isa = PBXBuildFile; fileRef = 6A33BEFD2E43623F002C718C /* Claudeinstructions.txt */; };
+		6A33BF002E436280002C718C /* Untitled.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A33BEFF2E436264002C718C /* Untitled.swift */; };
+		6A33BF022E43629E002C718C /* Nice Places App - Architecture Summary.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 6A33BF012E43629E002C718C /* Nice Places App - Architecture Summary.pdf */; };
 		6AFD844F2E3A7FE800B175CE /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6AFD844E2E3A7FE800B175CE /* CoreLocation.framework */; };
 		6AFD84512E3A7FEF00B175CE /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6AFD84502E3A7FEF00B175CE /* MapKit.framework */; };
 		6AFD84612E3B7A2300B175CE /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 6AFD84602E3B7A1300B175CE /* .gitignore */; };
@@ -30,6 +34,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		6A33BEB02E40BB8F002C718C /* Nice-Places-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Nice-Places-Info.plist"; sourceTree = "<group>"; };
+		6A33BEFD2E43623F002C718C /* Claudeinstructions.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Claudeinstructions.txt; sourceTree = "<group>"; };
+		6A33BEFF2E436264002C718C /* Untitled.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Untitled.swift; sourceTree = "<group>"; };
+		6A33BF012E43629E002C718C /* Nice Places App - Architecture Summary.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "Nice Places App - Architecture Summary.pdf"; sourceTree = "<group>"; };
 		6A6DE3C92E3A524E00474379 /* Nice Places.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Nice Places.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6A6DE3D82E3A524F00474379 /* Nice PlacesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Nice PlacesTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6A6DE3E22E3A524F00474379 /* Nice PlacesUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Nice PlacesUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -86,6 +94,10 @@
 		6A6DE3C02E3A524E00474379 = {
 			isa = PBXGroup;
 			children = (
+				6A33BF012E43629E002C718C /* Nice Places App - Architecture Summary.pdf */,
+				6A33BEFD2E43623F002C718C /* Claudeinstructions.txt */,
+				6A33BEFF2E436264002C718C /* Untitled.swift */,
+				6A33BEB02E40BB8F002C718C /* Nice-Places-Info.plist */,
 				6AFD84602E3B7A1300B175CE /* .gitignore */,
 				6A6DE3CB2E3A524E00474379 /* Nice Places */,
 				6A6DE3DB2E3A524F00474379 /* Nice PlacesTests */,
@@ -235,6 +247,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				6AFD84612E3B7A2300B175CE /* .gitignore in Resources */,
+				6A33BEB12E40BB8F002C718C /* Nice-Places-Info.plist in Resources */,
+				6A33BF022E43629E002C718C /* Nice Places App - Architecture Summary.pdf in Resources */,
+				6A33BEFE2E436258002C718C /* Claudeinstructions.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -259,6 +274,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6A33BF002E436280002C718C /* Untitled.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -345,6 +361,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_NSContactsUsageDescription = "Select Contact Info ";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -403,6 +420,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_NSContactsUsageDescription = "Select Contact Info ";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -427,6 +445,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
 				INFOPLIST_KEY_NSCameraUsageDescription = "LocationTracker needs camera access to capture photos and videos of your special places.";
+				INFOPLIST_KEY_NSContactsUsageDescription = 6.0;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "LocationTracker uses your location to provide accurate address information and altitude data";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "LocationTracker needs access to your location to show your current address and save location data.";
@@ -437,6 +456,9 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarHidden = NO;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -467,6 +489,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
 				INFOPLIST_KEY_NSCameraUsageDescription = "LocationTracker needs camera access to capture photos and videos of your special places.";
+				INFOPLIST_KEY_NSContactsUsageDescription = 6.0;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "LocationTracker uses your location to provide accurate address information and altitude data";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "LocationTracker needs access to your location to show your current address and save location data.";
@@ -477,6 +500,9 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarHidden = NO;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
