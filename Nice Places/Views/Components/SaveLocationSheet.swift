@@ -93,7 +93,7 @@ struct SaveLocationSheet: View {
                     )
                     .padding(.horizontal, 24)
                     
-                    // Comment Section
+                    // Comment Section with Speech-to-Text
                     VStack(spacing: 16) {
                         // Add Comment Toggle Button
                         if !showCommentField {
@@ -125,7 +125,7 @@ struct SaveLocationSheet: View {
                         
                         // Comment Text Field (animated)
                         if showCommentField {
-                            VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 16) {
                                 HStack {
                                     Text("Comment")
                                         .font(.headline)
@@ -144,7 +144,8 @@ struct SaveLocationSheet: View {
                                     .foregroundColor(.spotifyTextGray)
                                 }
                                 
-                                TextField("What makes this place special?", text: $comment, axis: .vertical)
+                                // Text Field
+                                TextField("Hva gjør dette stedet spesielt? / What makes this place special?", text: $comment, axis: .vertical)
                                     .textFieldStyle(.plain)
                                     .font(.body)
                                     .foregroundColor(.white)
@@ -155,6 +156,15 @@ struct SaveLocationSheet: View {
                                     )
                                     .focused($isTextFieldFocused)
                                     .lineLimit(3...6)
+                                
+                                // Speech-to-Text Button
+                                SpeechToTextButton(
+                                    text: $comment,
+                                    placeholder: "Trykk for å snakke din kommentar",
+                                    onTextChanged: { newText in
+                                        // Optional: Handle text changes if needed
+                                    }
+                                )
                             }
                             .padding(.horizontal, 24)
                             .transition(.asymmetric(

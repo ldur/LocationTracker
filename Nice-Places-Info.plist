@@ -61,5 +61,13 @@
 	<string>UIInterfaceOrientationPortrait</string>
 	<key>UIPrerenderedIcon</key>
 	<string>Nice Places can access your contacts to help you easily select emergency contact information. This information may be used for safety features when sharing locations.</string>
+   
+    <!-- Microphone permission for speech recognition -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Nice Places needs microphone access to convert your speech to text when adding location comments.</string>
+
+    <!-- Speech recognition permission -->
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Nice Places uses speech recognition to help you add comments to locations using your voice.</string>
 </dict>
 </plist>

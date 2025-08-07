@@ -12,6 +12,7 @@
 		6ACAD1452E44B62200608C41 /* claudeinstructions.md in Resources */ = {isa = PBXBuildFile; fileRef = 6ACAD1402E44B62200608C41 /* claudeinstructions.md */; };
 		6ACAD1462E44B62200608C41 /* Architecture_Overview_Nice_Places.md in Resources */ = {isa = PBXBuildFile; fileRef = 6ACAD13F2E44B62200608C41 /* Architecture_Overview_Nice_Places.md */; };
 		6ACAD1472E44B62200608C41 /* datastrategy.md in Resources */ = {isa = PBXBuildFile; fileRef = 6ACAD1412E44B62200608C41 /* datastrategy.md */; };
+		6ACAD14C2E44E17A00608C41 /* Speech.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6ACAD14B2E44E17A00608C41 /* Speech.framework */; };
 		6AFD844F2E3A7FE800B175CE /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6AFD844E2E3A7FE800B175CE /* CoreLocation.framework */; };
 		6AFD84512E3A7FEF00B175CE /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6AFD84502E3A7FEF00B175CE /* MapKit.framework */; };
 		6AFD84612E3B7A2300B175CE /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 6AFD84602E3B7A1300B175CE /* .gitignore */; };
@@ -43,6 +44,7 @@
 		6ACAD1402E44B62200608C41 /* claudeinstructions.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = claudeinstructions.md; sourceTree = "<group>"; };
 		6ACAD1412E44B62200608C41 /* datastrategy.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = datastrategy.md; sourceTree = "<group>"; };
 		6ACAD1422E44B62200608C41 /* index.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = index.md; sourceTree = "<group>"; };
+		6ACAD14B2E44E17A00608C41 /* Speech.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Speech.framework; path = System/Library/Frameworks/Speech.framework; sourceTree = SDKROOT; };
 		6AFD844E2E3A7FE800B175CE /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
 		6AFD84502E3A7FEF00B175CE /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = System/Library/Frameworks/MapKit.framework; sourceTree = SDKROOT; };
 		6AFD84602E3B7A1300B175CE /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
@@ -72,6 +74,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6AFD84512E3A7FEF00B175CE /* MapKit.framework in Frameworks */,
+				6ACAD14C2E44E17A00608C41 /* Speech.framework in Frameworks */,
 				6AFD844F2E3A7FE800B175CE /* CoreLocation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -131,6 +134,7 @@
 		6AFD844D2E3A7FE800B175CE /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				6ACAD14B2E44E17A00608C41 /* Speech.framework */,
 				6AFD84502E3A7FEF00B175CE /* MapKit.framework */,
 				6AFD844E2E3A7FE800B175CE /* CoreLocation.framework */,
 			);
