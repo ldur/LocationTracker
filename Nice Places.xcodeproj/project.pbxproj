@@ -8,8 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		6A33BEB12E40BB8F002C718C /* Nice-Places-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6A33BEB02E40BB8F002C718C /* Nice-Places-Info.plist */; };
-		6A33BEB52E424C28002C718C /* Claudeinstructions.txt in Resources */ = {isa = PBXBuildFile; fileRef = 6A33BEB42E424C15002C718C /* Claudeinstructions.txt */; };
-		6A33BEB72E424DA8002C718C /* Nice Places App - Architecture Summary.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 6A33BEB62E424DA8002C718C /* Nice Places App - Architecture Summary.pdf */; };
+		6A33BEFE2E436258002C718C /* Claudeinstructions.txt in Resources */ = {isa = PBXBuildFile; fileRef = 6A33BEFD2E43623F002C718C /* Claudeinstructions.txt */; };
+		6A33BF022E43629E002C718C /* Nice Places App - Architecture Summary.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 6A33BF012E43629E002C718C /* Nice Places App - Architecture Summary.pdf */; };
 		6AFD844F2E3A7FE800B175CE /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6AFD844E2E3A7FE800B175CE /* CoreLocation.framework */; };
 		6AFD84512E3A7FEF00B175CE /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6AFD84502E3A7FEF00B175CE /* MapKit.framework */; };
 		6AFD84612E3B7A2300B175CE /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 6AFD84602E3B7A1300B175CE /* .gitignore */; };
@@ -34,8 +34,8 @@
 
 /* Begin PBXFileReference section */
 		6A33BEB02E40BB8F002C718C /* Nice-Places-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Nice-Places-Info.plist"; sourceTree = "<group>"; };
-		6A33BEB42E424C15002C718C /* Claudeinstructions.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Claudeinstructions.txt; sourceTree = "<group>"; };
-		6A33BEB62E424DA8002C718C /* Nice Places App - Architecture Summary.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "Nice Places App - Architecture Summary.pdf"; sourceTree = "<group>"; };
+		6A33BEFD2E43623F002C718C /* Claudeinstructions.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Claudeinstructions.txt; sourceTree = "<group>"; };
+		6A33BF012E43629E002C718C /* Nice Places App - Architecture Summary.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "Nice Places App - Architecture Summary.pdf"; sourceTree = "<group>"; };
 		6A6DE3C92E3A524E00474379 /* Nice Places.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Nice Places.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6A6DE3D82E3A524F00474379 /* Nice PlacesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Nice PlacesTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6A6DE3E22E3A524F00474379 /* Nice PlacesUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Nice PlacesUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -58,11 +58,6 @@
 		6A6DE3E52E3A524F00474379 /* Nice PlacesUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Nice PlacesUITests";
-			sourceTree = "<group>";
-		};
-		6A8FFC1B2E3CFD8800384405 /* docs */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = docs;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -97,10 +92,9 @@
 		6A6DE3C02E3A524E00474379 = {
 			isa = PBXGroup;
 			children = (
-				6A33BEB42E424C15002C718C /* Claudeinstructions.txt */,
-				6A33BEB62E424DA8002C718C /* Nice Places App - Architecture Summary.pdf */,
+				6A33BF012E43629E002C718C /* Nice Places App - Architecture Summary.pdf */,
+				6A33BEFD2E43623F002C718C /* Claudeinstructions.txt */,
 				6A33BEB02E40BB8F002C718C /* Nice-Places-Info.plist */,
-				6A8FFC1B2E3CFD8800384405 /* docs */,
 				6AFD84602E3B7A1300B175CE /* .gitignore */,
 				6A6DE3CB2E3A524E00474379 /* Nice Places */,
 				6A6DE3DB2E3A524F00474379 /* Nice PlacesTests */,
@@ -146,7 +140,6 @@
 			);
 			fileSystemSynchronizedGroups = (
 				6A6DE3CB2E3A524E00474379 /* Nice Places */,
-				6A8FFC1B2E3CFD8800384405 /* docs */,
 			);
 			name = "Nice Places";
 			packageProductDependencies = (
@@ -251,9 +244,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				6AFD84612E3B7A2300B175CE /* .gitignore in Resources */,
-				6A33BEB52E424C28002C718C /* Claudeinstructions.txt in Resources */,
 				6A33BEB12E40BB8F002C718C /* Nice-Places-Info.plist in Resources */,
-				6A33BEB72E424DA8002C718C /* Nice Places App - Architecture Summary.pdf in Resources */,
+				6A33BF022E43629E002C718C /* Nice Places App - Architecture Summary.pdf in Resources */,
+				6A33BEFE2E436258002C718C /* Claudeinstructions.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

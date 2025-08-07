@@ -1,4 +1,4 @@
-// /Views/Trips/TripNavigationView.swift
+// /Views/Trips/TripNavigationView.swift - Complete Google Maps Style Navigation
 
 import SwiftUI
 import MapKit
@@ -17,9 +17,14 @@ struct TripNavigationView: View {
     @State private var isFollowingUser = true
     @State private var mapRotation: Double = 0
     
-    // UI State
-    @State private var showFullInstructions = false
-    @State private var selectedDetent: PresentationDetent = .fraction(0.3)
+    // Arrival screen state
+    @State private var showingArrivalScreen = false
+    @State private var arrivalTime: Date?
+    @State private var currentDestination: LocationData?
+    
+    // Voice instructions
+    @State private var showingVoiceInstruction = false
+    @State private var voiceInstructionText = ""
     
     private var sortedLocations: [LocationData] {
         locations.sorted { $0.timestamp < $1.timestamp }
@@ -27,21 +32,99 @@ struct TripNavigationView: View {
     
     var body: some View {
         ZStack {
-            // Navigation Map
-            NavigationMapView(
-                navigationManager: navigationManager,
-                cameraPosition: $cameraPosition,
-                isFollowingUser: $isFollowingUser,
-                mapRotation: $mapRotation,
-                trip: trip,
-                locations: sortedLocations
-            )
+            // Enhanced Google Maps Style Navigation Map
+            Map(position: $cameraPosition) {
+                // Route Path - Google Maps Style with multiple layers
+                if let route = navigationManager.currentRoute {
+                    // Background route line (white outline)
+                    MapPolyline(route.polyline)
+                        .stroke(.white, style: StrokeStyle(
+                            lineWidth: 14,
+                            lineCap: .round,
+                            lineJoin: .round
+                        ))
+                    
+                    // Main route line (blue)
+                    MapPolyline(route.polyline)
+                        .stroke(Color.blue, style: StrokeStyle(
+                            lineWidth: 8,
+                            lineCap: .round,
+                            lineJoin: .round
+                        ))
+                    
+                    // Route progress indicator
+                    if let userLocation = navigationManager.userLocation {
+                        let progressPolyline = RouteHelper.createTraveledPolyline(route: route, userLocation: userLocation)
+                        if let progressPolyline = progressPolyline {
+                            MapPolyline(progressPolyline)
+                                .stroke(Color.blue.opacity(0.7), style: StrokeStyle(
+                                    lineWidth: 10,
+                                    lineCap: .round,
+                                    lineJoin: .round
+                                ))
+                        }
+                    }
+                }
+                
+                // User Location - Google Maps Style
+                if let userLocation = navigationManager.userLocation {
+                    Annotation("", coordinate: userLocation.coordinate) {
+                        GoogleMapsStyleUserMarker(
+                            heading: navigationManager.userHeading?.trueHeading,
+                            isOnRoute: navigationManager.isOnRoute
+                        )
+                    }
+                }
+                
+                // Destination Markers - Google Maps Style
+                ForEach(Array(sortedLocations.enumerated()), id: \.element.id) { index, location in
+                    let isCompleted = index < navigationManager.currentLocationIndex
+                    let isCurrent = index == navigationManager.currentLocationIndex
+                    let isFuture = index > navigationManager.currentLocationIndex
+                    
+                    Annotation(
+                        location.address,
+                        coordinate: location.coordinate,
+                        anchor: .bottom
+                    ) {
+                        GoogleMapsStyleLocationMarker(
+                            location: location,
+                            index: index + 1,
+                            tripColor: trip.color.color,
+                            isCompleted: isCompleted,
+                            isCurrent: isCurrent,
+                            isFuture: isFuture
+                        )
+                    }
+                }
+            }
+            .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
+            .mapControls {
+                MapCompass()
+                    .mapControlVisibility(.hidden)
+            }
             .ignoresSafeArea()
+            .onTapGesture {
+                isFollowingUser = false
+            }
             
-            // Top Navigation Bar
+            // Navigation HUD Overlays
             VStack {
-                NavigationTopBar(
+                Spacer()
+                
+                NavigationHUD(
                     navigationManager: navigationManager,
+                    trip: trip
+                )
+                .padding(.bottom, 180) // Space for instruction card
+            }
+            
+            // Google Maps Style Top Bar
+            VStack {
+                GoogleMapsStyleTopBar(
+                    navigationManager: navigationManager,
+                    trip: trip,
+                    isFollowingUser: isFollowingUser,
                     onExit: { showingExitConfirmation = true },
                     onToggleOverview: { showingRouteOverview.toggle() },
                     onRecenter: {
@@ -49,24 +132,59 @@ struct TripNavigationView: View {
                         updateCameraToUserLocation()
                     }
                 )
+                .padding(.top, 50)
+                
+                // Voice Instruction Display
+                if showingVoiceInstruction {
+                    VoiceInstructionDisplay(
+                        instruction: voiceInstructionText,
+                        isActive: showingVoiceInstruction
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                }
                 
                 Spacer()
             }
             
-            // Bottom Navigation Panel
-            VStack {
-                Spacer()
-                
-                NavigationInstructionPanel(
-                    navigationManager: navigationManager,
+            // Turn Instruction Card (when not showing arrival)
+            if !showingArrivalScreen {
+                VStack {
+                    Spacer()
+                    
+                    TurnInstructionCard(
+                        navigationManager: navigationManager,
+                        trip: trip
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 20)
+                }
+            }
+            
+            // Arrival Screen Overlay
+            if showingArrivalScreen, let destination = currentDestination, let arrival = arrivalTime {
+                ArrivalScreen(
+                    destination: destination,
                     trip: trip,
-                    showFullInstructions: $showFullInstructions,
-                    onSkipLocation: {
+                    arrivalTime: arrival,
+                    navigationManager: navigationManager,
+                    onContinue: {
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            showingArrivalScreen = false
+                        }
                         Task {
                             await navigationManager.skipToNextLocation()
                         }
+                    },
+                    onFinish: {
+                        navigationManager.stopNavigation()
+                        onDismiss()
                     }
                 )
+                .transition(.asymmetric(
+                    insertion: .move(edge: .bottom).combined(with: .opacity),
+                    removal: .move(edge: .bottom).combined(with: .opacity)
+                ))
             }
         }
         .onAppear {
@@ -80,6 +198,18 @@ struct TripNavigationView: View {
         .onChange(of: navigationManager.userLocation) { _, newLocation in
             if isFollowingUser, let location = newLocation {
                 updateCameraToLocation(location)
+            }
+        }
+        .onChange(of: navigationManager.currentLocationIndex) { oldIndex, newIndex in
+            // Check if we've moved to a new location (arrived at destination)
+            if newIndex > oldIndex && newIndex <= sortedLocations.count {
+                handleArrivalAtDestination()
+            }
+        }
+        .onChange(of: navigationManager.currentInstruction) { _, newInstruction in
+            // Trigger voice instruction display
+            if !newInstruction.isEmpty && newInstruction != "Calculating route..." {
+                triggerVoiceInstruction(newInstruction)
             }
         }
         .alert("Exit Navigation", isPresented: $showingExitConfirmation) {
@@ -101,6 +231,45 @@ struct TripNavigationView: View {
         }
     }
     
+    // MARK: - Helper Functions
+    
+    private func handleArrivalAtDestination() {
+        // Get the destination we just arrived at
+        let arrivedIndex = navigationManager.currentLocationIndex - 1
+        if arrivedIndex >= 0 && arrivedIndex < sortedLocations.count {
+            currentDestination = sortedLocations[arrivedIndex]
+            arrivalTime = Date()
+            
+            withAnimation(.easeInOut(duration: 0.5)) {
+                showingArrivalScreen = true
+            }
+            
+            // Auto-dismiss arrival screen after 8 seconds if not interacted with
+            DispatchQueue.main.asyncAfter(deadline: .now() + 8.0) {
+                if showingArrivalScreen {
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        showingArrivalScreen = false
+                    }
+                }
+            }
+        }
+    }
+    
+    private func triggerVoiceInstruction(_ instruction: String) {
+        voiceInstructionText = instruction
+        
+        withAnimation(.easeInOut(duration: 0.3)) {
+            showingVoiceInstruction = true
+        }
+        
+        // Hide after 4 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                showingVoiceInstruction = false
+            }
+        }
+    }
+    
     private func startNavigation() async {
         await navigationManager.startNavigation(for: trip, locations: sortedLocations, startIndex: startLocationIndex)
     }
@@ -111,15 +280,15 @@ struct TripNavigationView: View {
     }
     
     private func updateCameraToLocation(_ location: CLLocation) {
-        withAnimation(.easeInOut(duration: 0.5)) {
+        withAnimation(.easeInOut(duration: 0.8)) {
             let heading = navigationManager.userHeading?.trueHeading ?? 0
             
             cameraPosition = .camera(
                 MapCamera(
                     centerCoordinate: location.coordinate,
-                    distance: 500, // Zoom level for navigation
+                    distance: 600, // Google Maps style zoom
                     heading: isFollowingUser ? heading : 0,
-                    pitch: 60 // Tilted view for navigation
+                    pitch: 65 // Google Maps style tilt
                 )
             )
             
@@ -128,120 +297,71 @@ struct TripNavigationView: View {
             }
         }
     }
-}
-
-// MARK: - Navigation Map View
-struct NavigationMapView: View {
-    var navigationManager: NavigationManager
-    @Binding var cameraPosition: MapCameraPosition
-    @Binding var isFollowingUser: Bool
-    @Binding var mapRotation: Double
-    let trip: Trip
-    let locations: [LocationData]
     
-    var body: some View {
-        Map(position: $cameraPosition) {
-            // User Location
-            if let userLocation = navigationManager.userLocation {
-                Annotation("", coordinate: userLocation.coordinate) {
-                    NavigationUserMarker(heading: navigationManager.userHeading?.trueHeading)
-                }
-            }
-            
-            // Current Route
-            if let route = navigationManager.currentRoute {
-                MapPolyline(route.polyline)
-                    .stroke(trip.color.color, style: StrokeStyle(
-                        lineWidth: 8,
-                        lineCap: .round,
-                        lineJoin: .round
-                    ))
-                
-                // Alternative style for better visibility
-                MapPolyline(route.polyline)
-                    .stroke(.white.opacity(0.5), style: StrokeStyle(
-                        lineWidth: 10,
-                        lineCap: .round,
-                        lineJoin: .round
-                    ))
-            }
-            
-            // Destination Markers
-            ForEach(Array(locations.enumerated()), id: \.element.id) { index, location in
-                let isCompleted = index < navigationManager.currentLocationIndex
-                let isCurrent = index == navigationManager.currentLocationIndex
-                let isFuture = index > navigationManager.currentLocationIndex
-                
-                Annotation(
-                    location.address,
-                    coordinate: location.coordinate,
-                    anchor: .bottom
-                ) {
-                    NavigationLocationMarker(
-                        location: location,
-                        index: index + 1,
-                        tripColor: trip.color.color,
-                        isCompleted: isCompleted,
-                        isCurrent: isCurrent,
-                        isFuture: isFuture
-                    )
-                }
+    private func createProgressPolyline(route: MKRoute, userLocation: CLLocation) -> MKPolyline? {
+        let routeCoordinates = route.polyline.coordinates
+        guard !routeCoordinates.isEmpty else { return nil }
+        
+        // Find the closest point on the route to the user's location
+        var closestIndex = 0
+        var minDistance = Double.greatestFiniteMagnitude
+        
+        for (index, coordinate) in routeCoordinates.enumerated() {
+            let routeLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+            let distance = userLocation.distance(from: routeLocation)
+            if distance < minDistance {
+                minDistance = distance
+                closestIndex = index
             }
         }
-        .mapStyle(.standard(elevation: .realistic))
-        .mapControls {
-            MapCompass()
-                .mapControlVisibility(.visible)
+        
+        // Create polyline from start to user's position
+        if closestIndex > 0 {
+            let traveledCoordinates = Array(routeCoordinates[0...closestIndex])
+            return MKPolyline(coordinates: traveledCoordinates, count: traveledCoordinates.count)
         }
-        .onTapGesture {
-            // Disable follow mode when user interacts with map
-            isFollowingUser = false
-        }
+        
+        return nil
     }
 }
 
-// MARK: - Navigation User Marker
-struct NavigationUserMarker: View {
+// MARK: - Google Maps Style User Marker
+struct GoogleMapsStyleUserMarker: View {
     let heading: Double?
+    let isOnRoute: Bool
     
     var body: some View {
         ZStack {
-            // Direction cone
+            // Outer ring - Google Maps style
+            Circle()
+                .fill(.white)
+                .frame(width: 24, height: 24)
+                .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+            
+            // Direction indicator
             if let heading = heading {
                 Image(systemName: "location.north.fill")
-                    .font(.system(size: 30))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.blue)
                     .rotationEffect(.degrees(heading))
-                    .shadow(color: .black.opacity(0.3), radius: 2)
             } else {
                 Circle()
-                    .fill(Color.blue)
-                    .frame(width: 20, height: 20)
-                    .overlay(
-                        Circle()
-                            .fill(Color.white)
-                            .frame(width: 8, height: 8)
-                    )
-                    .shadow(color: .black.opacity(0.3), radius: 2)
+                    .fill(.blue)
+                    .frame(width: 16, height: 16)
             }
             
-            // Pulsing animation
+            // Accuracy ring - Google Maps style
             Circle()
-                .stroke(Color.blue.opacity(0.5), lineWidth: 2)
+                .stroke(.blue.opacity(0.3), lineWidth: 1)
                 .frame(width: 40, height: 40)
-                .scaleEffect(1.5)
-                .opacity(0)
-                .animation(
-                    Animation.easeOut(duration: 1.5)
-                        .repeatForever(autoreverses: false),
-                    value: UUID()
-                )
         }
+        .scaleEffect(isOnRoute ? 1.0 : 1.2)
+        .animation(.easeInOut(duration: 0.3), value: isOnRoute)
     }
 }
 
-// MARK: - Navigation Location Marker
-struct NavigationLocationMarker: View {
+// MARK: - Google Maps Style Location Marker
+struct GoogleMapsStyleLocationMarker: View {
     let location: LocationData
     let index: Int
     let tripColor: Color
@@ -252,504 +372,130 @@ struct NavigationLocationMarker: View {
     var body: some View {
         ZStack {
             if isCurrent {
-                // Pulsing current destination
+                // Pulsing animation for current destination
                 Circle()
-                    .fill(tripColor.opacity(0.3))
+                    .fill(.blue.opacity(0.2))
                     .frame(width: 60, height: 60)
-                    .scaleEffect(1.2)
-                    .opacity(0.5)
+                    .scaleEffect(1.5)
+                    .opacity(0.8)
                     .animation(
-                        Animation.easeInOut(duration: 1.5)
+                        Animation.easeInOut(duration: 2.0)
                             .repeatForever(autoreverses: true),
                         value: UUID()
                     )
             }
             
-            // Main marker
-            Circle()
-                .fill(isCompleted ? Color.gray : (isCurrent ? tripColor : tripColor.opacity(0.7)))
-                .frame(width: isCurrent ? 40 : 32, height: isCurrent ? 40 : 32)
-                .overlay(
-                    Group {
-                        if isCompleted {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.white)
-                        } else {
-                            Text("\(index)")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-                    }
-                )
-                .shadow(color: .black.opacity(0.3), radius: 3)
+            // Pin shadow
+            Ellipse()
+                .fill(.black.opacity(0.2))
+                .frame(width: isCurrent ? 20 : 16, height: isCurrent ? 6 : 4)
+                .offset(y: isCurrent ? 25 : 20)
             
-            // Direction indicator for current destination
+            // Main pin
+            ZStack {
+                RoundedRectangle(cornerRadius: isCurrent ? 20 : 16)
+                    .fill(.white)
+                    .frame(width: isCurrent ? 40 : 32, height: isCurrent ? 40 : 32)
+                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                
+                if isCompleted {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: isCurrent ? 16 : 14, weight: .bold))
+                        .foregroundColor(.green)
+                } else {
+                    Text("\(index)")
+                        .font(.system(size: isCurrent ? 16 : 14, weight: .bold))
+                        .foregroundColor(isCurrent ? .blue : tripColor)
+                }
+            }
+            
             if isCurrent {
-                Image(systemName: "arrowtriangle.down.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(tripColor)
-                    .offset(y: 25)
+                VStack {
+                    Spacer()
+                    Image(systemName: "arrowtriangle.down.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.blue)
+                        .offset(y: 28)
+                }
             }
         }
+        .scaleEffect(isCurrent ? 1.1 : (isCompleted ? 0.9 : 1.0))
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: isCurrent)
     }
 }
 
-// MARK: - Navigation Top Bar
-struct NavigationTopBar: View {
+// MARK: - Google Maps Style Top Bar
+struct GoogleMapsStyleTopBar: View {
     var navigationManager: NavigationManager
+    let trip: Trip
+    let isFollowingUser: Bool
     let onExit: () -> Void
     let onToggleOverview: () -> Void
     let onRecenter: () -> Void
     
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 12) {
             // Exit Button
             Button(action: onExit) {
                 Image(systemName: "xmark")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(width: 40, height: 40)
-                    .background(
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .background(Circle().fill(Color.black.opacity(0.5)))
-                    )
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.primary)
+                    .frame(width: 44, height: 44)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
             }
             
-            // Status Bar
-            HStack {
-                if navigationManager.isCalculatingRoute || navigationManager.isRerouting {
-                    ProgressView()
-                        .tint(.white)
-                        .scaleEffect(0.8)
-                } else if !navigationManager.isOnRoute {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
-                }
-                
+            // ETA and Distance Card
+            HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    if let destination = navigationManager.getCurrentDestination() {
-                        Text("Navigating to")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.8))
+                    if let eta = navigationManager.etaToNextLocation {
+                        Text(eta, style: .time)
+                            .font(.system(size: 24, weight: .bold, design: .default))
+                            .foregroundColor(.primary)
+                    } else {
+                        Text("--:--")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    HStack(spacing: 4) {
+                        Text(navigationManager.formatDistance(navigationManager.distanceToNextLocation))
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
                         
-                        Text(destination.address.components(separatedBy: ",").first ?? destination.address)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.white)
-                            .lineLimit(1)
+                        // Traffic indicator dot
+                        let traffic = navigationManager.getTrafficCondition()
+                        Circle()
+                            .fill(traffic.color)
+                            .frame(width: 4, height: 4)
                     }
                 }
                 
                 Spacer()
                 
-                // ETA
-                if let eta = navigationManager.etaToNextLocation {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("ETA")
-                            .font(.caption2)
-                            .foregroundColor(.white.opacity(0.8))
-                        
-                        Text(eta, style: .time)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.white)
-                    }
+                // Route overview button
+                Button(action: onToggleOverview) {
+                    Image(systemName: "map")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.blue)
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(.ultraThinMaterial)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.spotifyMediumGray.opacity(0.9))
-                    )
-            )
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22))
+            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
             
-            // Menu Button
-            Menu {
-                Button(action: onToggleOverview) {
-                    Label("Route Overview", systemImage: "map")
-                }
-                
-                Button(action: onRecenter) {
-                    Label("Recenter Map", systemImage: "location")
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(width: 40, height: 40)
-                    .background(
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .background(Circle().fill(Color.black.opacity(0.5)))
-                    )
+            // Recenter Button
+            Button(action: onRecenter) {
+                Image(systemName: isFollowingUser ? "location.fill" : "location")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(isFollowingUser ? .blue : .primary)
+                    .frame(width: 44, height: 44)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 60)
-    }
-}
-
-// MARK: - Navigation Instruction Panel
-struct NavigationInstructionPanel: View {
-    var navigationManager: NavigationManager
-    let trip: Trip
-    @Binding var showFullInstructions: Bool
-    let onSkipLocation: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            // Direction Card
-            VStack(spacing: 16) {
-                // Current Instruction
-                HStack(spacing: 16) {
-                    // Turn Icon
-                    NavigationTurnIcon(instruction: navigationManager.currentInstruction)
-                        .font(.system(size: 40))
-                        .foregroundColor(.white)
-                        .frame(width: 60, height: 60)
-                        .background(
-                            Circle()
-                                .fill(trip.color.color)
-                        )
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(navigationManager.currentInstruction.isEmpty ? "Calculating route..." : navigationManager.currentInstruction)
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .lineLimit(2)
-                        
-                        HStack(spacing: 12) {
-                            // Distance to turn
-                            HStack(spacing: 4) {
-                                Image(systemName: "arrow.up")
-                                    .font(.caption)
-                                Text(navigationManager.formatDistance(navigationManager.distanceToNextTurn))
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundColor(.spotifyGreen)
-                            
-                            // Time remaining
-                            HStack(spacing: 4) {
-                                Image(systemName: "clock")
-                                    .font(.caption)
-                                Text(navigationManager.formatTime(navigationManager.timeToDestination))
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundColor(.spotifyTextGray)
-                            
-                            // Distance remaining
-                            HStack(spacing: 4) {
-                                Image(systemName: "location")
-                                    .font(.caption)
-                                Text(navigationManager.formatDistance(navigationManager.distanceToNextLocation))
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundColor(.spotifyTextGray)
-                        }
-                    }
-                    
-                    Spacer()
-                }
-                
-                // Next Instruction Preview
-                if !navigationManager.nextInstruction.isEmpty {
-                    HStack(spacing: 12) {
-                        Text("Then:")
-                            .font(.caption)
-                            .foregroundColor(.spotifyTextGray)
-                        
-                        Text(navigationManager.nextInstruction)
-                            .font(.caption)
-                            .foregroundColor(.white)
-                            .lineLimit(1)
-                        
-                        Spacer()
-                    }
-                    .padding(.leading, 76)
-                }
-                
-                Divider()
-                    .background(Color.spotifyTextGray.opacity(0.3))
-                
-                // Navigation Controls
-                HStack(spacing: 16) {
-                    // Skip to Next Location
-                    if navigationManager.currentLocationIndex < navigationManager.tripLocations.count - 1 {
-                        Button(action: onSkipLocation) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "forward.fill")
-                                    .font(.caption)
-                                Text("Skip Location")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundColor(.spotifyTextGray)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(Color.spotifyMediumGray.opacity(0.6))
-                            )
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    // Progress Indicator
-                    HStack(spacing: 8) {
-                        Text("Stop")
-                            .font(.caption2)
-                            .foregroundColor(.spotifyTextGray)
-                        
-                        Text("\(navigationManager.currentLocationIndex + 1)")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(trip.color.color)
-                        
-                        Text("of")
-                            .font(.caption2)
-                            .foregroundColor(.spotifyTextGray)
-                        
-                        Text("\(navigationManager.tripLocations.count)")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                    }
-                }
-            }
-            .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .background(
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .fill(Color.spotifyDarkGray.opacity(0.95))
-                    )
-            )
-            .padding(.horizontal, 16)
-            .padding(.bottom, 20)
-        }
-    }
-}
-
-// MARK: - Navigation Turn Icon
-struct NavigationTurnIcon: View {
-    let instruction: String
-    
-    private var iconName: String {
-        let lowercased = instruction.lowercased()
-        
-        if lowercased.contains("left") {
-            return "arrow.turn.up.left"
-        } else if lowercased.contains("right") {
-            return "arrow.turn.up.right"
-        } else if lowercased.contains("straight") || lowercased.contains("continue") {
-            return "arrow.up"
-        } else if lowercased.contains("merge") {
-            return "arrow.merge"
-        } else if lowercased.contains("exit") {
-            return "arrow.up.right.circle"
-        } else if lowercased.contains("arrive") || lowercased.contains("destination") {
-            return "mappin.circle.fill"
-        } else if lowercased.contains("u-turn") || lowercased.contains("uturn") {
-            return "arrow.uturn.up"
-        } else {
-            return "arrow.up"
-        }
-    }
-    
-    var body: some View {
-        Image(systemName: iconName)
-    }
-}
-
-// MARK: - Navigation Route Overview
-struct NavigationRouteOverview: View {
-    var navigationManager: NavigationManager
-    let trip: Trip
-    let locations: [LocationData]
-    
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                LinearGradient(
-                    colors: [Color.spotifyDarkGray, Color.black],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-                
-                ScrollView {
-                    VStack(spacing: 20) {
-                        // Trip Header
-                        VStack(spacing: 12) {
-                            Image(systemName: "map.circle.fill")
-                                .font(.system(size: 50))
-                                .foregroundColor(trip.color.color)
-                            
-                            Text(trip.name)
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                            
-                            HStack(spacing: 16) {
-                                // Total Distance
-                                HStack(spacing: 4) {
-                                    Image(systemName: "location")
-                                        .font(.caption)
-                                    Text(formatTotalDistance())
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                }
-                                .foregroundColor(.spotifyGreen)
-                                
-                                // Estimated Time
-                                HStack(spacing: 4) {
-                                    Image(systemName: "clock")
-                                        .font(.caption)
-                                    Text(formatTotalTime())
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                }
-                                .foregroundColor(.spotifyTextGray)
-                                
-                                // Stops
-                                HStack(spacing: 4) {
-                                    Image(systemName: "mappin")
-                                        .font(.caption)
-                                    Text("\(locations.count) stops")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                }
-                                .foregroundColor(.spotifyTextGray)
-                            }
-                        }
-                        .padding(.top, 20)
-                        
-                        // Route List
-                        VStack(spacing: 0) {
-                            ForEach(Array(locations.enumerated()), id: \.element.id) { index, location in
-                                NavigationRouteStopRow(
-                                    location: location,
-                                    index: index,
-                                    tripColor: trip.color.color,
-                                    isCompleted: index < navigationManager.currentLocationIndex,
-                                    isCurrent: index == navigationManager.currentLocationIndex,
-                                    isLast: index == locations.count - 1
-                                )
-                            }
-                        }
-                        .padding(.horizontal, 24)
-                    }
-                    .padding(.bottom, 40)
-                }
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Route Overview")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                }
-                
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .foregroundColor(.spotifyGreen)
-                }
-            }
-        }
-    }
-    
-    private func formatTotalDistance() -> String {
-        let totalDistance = navigationManager.allRoutes.reduce(0) { $0 + $1.distance }
-        return navigationManager.formatDistance(totalDistance)
-    }
-    
-    private func formatTotalTime() -> String {
-        let totalTime = navigationManager.allRoutes.reduce(0) { $0 + $1.expectedTravelTime }
-        return navigationManager.formatTime(totalTime)
-    }
-}
-
-// MARK: - Navigation Route Stop Row
-struct NavigationRouteStopRow: View {
-    let location: LocationData
-    let index: Int
-    let tripColor: Color
-    let isCompleted: Bool
-    let isCurrent: Bool
-    let isLast: Bool
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            // Step indicator with connection line
-            VStack(spacing: 0) {
-                ZStack {
-                    Circle()
-                        .fill(isCompleted ? Color.gray : (isCurrent ? tripColor : tripColor.opacity(0.3)))
-                        .frame(width: isCurrent ? 36 : 32, height: isCurrent ? 36 : 32)
-                    
-                    if isCompleted {
-                        Image(systemName: "checkmark")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                    } else {
-                        Text("\(index + 1)")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                    }
-                }
-                
-                if !isLast {
-                    Rectangle()
-                        .fill(isCompleted ? Color.gray : tripColor.opacity(0.3))
-                        .frame(width: 2, height: 50)
-                }
-            }
-            
-            // Location info
-            VStack(alignment: .leading, spacing: 6) {
-                if isCurrent {
-                    Text("NAVIGATING TO")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundColor(tripColor)
-                }
-                
-                Text(location.address)
-                    .font(.subheadline)
-                    .fontWeight(isCurrent ? .semibold : .regular)
-                    .foregroundColor(isCompleted ? .spotifyTextGray : .white)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                
-                if let comment = location.comment, !comment.isEmpty {
-                    Text(comment)
-                        .font(.caption)
-                        .foregroundColor(.spotifyTextGray)
-                        .lineLimit(1)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, isLast ? 0 : 8)
-        }
     }
 }
 
