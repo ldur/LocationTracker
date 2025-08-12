@@ -7,6 +7,7 @@ import CoreLocation
 struct ActiveTripBanner: View {
     let trip: Trip
     let locationCount: Int
+    let locations: [LocationData] // NEW: Add locations data
     let onTap: () -> Void
     let onEnd: () -> Void
     
@@ -88,6 +89,25 @@ struct ActiveTripBanner: View {
                                 .foregroundColor(.white)
                         }
                         
+                        // NEW: Start location indicator
+                        let locationInfo = trip.getStartAndEndLocationInfo(from: locations)
+                        if locationInfo.hasStart {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Start")
+                                    .font(.caption)
+                                    .foregroundColor(.spotifyTextGray)
+                                
+                                HStack(spacing: 2) {
+                                    Image(systemName: "location.fill")
+                                        .font(.caption2)
+                                        .foregroundColor(.spotifyGreen)
+                                    Text("Set")
+                                        .font(.caption2)
+                                        .foregroundColor(.spotifyGreen)
+                                }
+                            }
+                        }
+                        
                         // Enhanced auto-save status with trip type
                         if trip.autoSaveConfig.isEnabled {
                             VStack(alignment: .leading, spacing: 2) {
@@ -105,26 +125,26 @@ struct ActiveTripBanner: View {
                     }
                 }
                 
+                Spacer()
+                
                 // End Trip Button
                 Button(action: onEnd) {
-                    Image(systemName: "stop.circle")
+                    Image(systemName: "stop.circle.fill")
                         .font(.title2)
-                        .foregroundColor(.spotifyTextGray)
+                        .foregroundColor(.red)
                 }
-                .buttonStyle(.plain)
             }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.spotifyMediumGray.opacity(0.6))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(trip.color.color.opacity(0.3), lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.spotifyMediumGray.opacity(0.8))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(trip.color.color.opacity(0.3), lineWidth: 1)
-                )
-        )
-        .padding(.horizontal, 24)
     }
 }
 
@@ -132,6 +152,7 @@ struct ActiveTripBanner: View {
 struct TripCard: View {
     let trip: Trip
     let statistics: TripStatistics
+    let locations: [LocationData] // NEW: Add locations data
     let onTap: () -> Void
     
     var body: some View {
@@ -193,6 +214,60 @@ struct TripCard: View {
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
                         )
+                }
+                
+                // NEW: Start/End Location Indicator
+                let locationInfo = trip.getStartAndEndLocationInfo(from: locations)
+                if locationInfo.hasStart || locationInfo.hasEnd {
+                    HStack(spacing: 12) {
+                        if locationInfo.hasStart {
+                            HStack(spacing: 4) {
+                                Image(systemName: "location.fill")
+                                    .font(.caption2)
+                                    .foregroundColor(.spotifyGreen)
+                                Text("Start")
+                                    .font(.caption2)
+                                    .foregroundColor(.spotifyGreen)
+                            }
+                        }
+                        
+                        if locationInfo.hasStart && locationInfo.hasEnd {
+                            Image(systemName: "arrow.right")
+                                .font(.caption2)
+                                .foregroundColor(.spotifyTextGray)
+                        }
+                        
+                        if locationInfo.hasEnd {
+                            HStack(spacing: 4) {
+                                Image(systemName: "location.fill")
+                                    .font(.caption2)
+                                    .foregroundColor(.spotifyGreen)
+                                Text("End")
+                                    .font(.caption2)
+                                    .foregroundColor(.spotifyGreen)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        // Show completion indicator
+                        if locationInfo.hasStart && locationInfo.hasEnd {
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.caption2)
+                                    .foregroundColor(.spotifyGreen)
+                                Text("Complete")
+                                    .font(.caption2)
+                                    .foregroundColor(.spotifyGreen)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.spotifyGreen.opacity(0.1))
+                    )
                 }
                 
                 // Statistics Row
@@ -1024,6 +1099,7 @@ struct TripSelectionRow: View {
     TripCard(
         trip: sampleTrip,
         statistics: sampleStats,
+        locations: sampleLocations,
         onTap: {}
     )
     .preferredColorScheme(.dark)

@@ -74,13 +74,56 @@ class TripManager {
     
     func endActiveTrip() {
         if let activeIndex = savedTrips.firstIndex(where: { $0.isActive }) {
+            let activeTrip = savedTrips[activeIndex]
             savedTrips[activeIndex].endTrip()
             saveToPersistence()
+            
+            // NEW: Auto-create end location if current location is available
+            if let currentLocation = getCurrentLocation(), let currentAddress = getCurrentAddress() {
+                createEndLocationForTrip(activeTrip, location: currentLocation, address: currentAddress)
+            }
             
             // NEW: Stop auto-save when trip ends
             stopAutoSaveTimer()
             resetAutoSaveStateForNewTrip()
         }
+    }
+    
+    // NEW: Helper method to create end location for trip
+    private func createEndLocationForTrip(_ trip: Trip, location: CLLocation, address: String) {
+        let endLocation = LocationData(
+            address: address,
+            coordinate: location.coordinate,
+            altitude: location.altitude,
+            comment: "Trip end location"
+        )
+        
+        // Save to DataManager
+        dataManager.saveLocation(endLocation)
+        
+        // Add to trip
+        addLocationToActiveTrip(endLocation.id)
+        
+        print("🚗 TripManager: Created end location for trip: \(trip.name)")
+    }
+    
+    // NEW: Helper methods to get current location and address
+    // These will be called by the view layer to provide current location data
+    private var currentLocationProvider: (() -> CLLocation?)?
+    private var currentAddressProvider: (() -> String?)?
+    
+    // NEW: Set location providers (called by view layer)
+    func setLocationProviders(locationProvider: @escaping () -> CLLocation?, addressProvider: @escaping () -> String?) {
+        self.currentLocationProvider = locationProvider
+        self.currentAddressProvider = addressProvider
+    }
+    
+    private func getCurrentLocation() -> CLLocation? {
+        return currentLocationProvider?()
+    }
+    
+    private func getCurrentAddress() -> String? {
+        return currentAddressProvider?()
     }
     
     func deleteTrip(_ trip: Trip) {

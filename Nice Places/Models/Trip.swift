@@ -115,6 +115,29 @@ struct Trip: Identifiable, Codable, Hashable, Equatable {
         isActive ? "location.fill" : "checkmark.circle.fill"
     }
     
+    // NEW: Check if trip has both start and end locations
+    func hasStartAndEndLocations(from locations: [LocationData]) -> Bool {
+        let tripLocations = locations.filter { locationIds.contains($0.id) }
+        let hasStartLocation = tripLocations.contains { $0.comment?.contains("Trip start location") == true }
+        let hasEndLocation = tripLocations.contains { $0.comment?.contains("Trip end location") == true }
+        return hasStartLocation && hasEndLocation
+    }
+    
+    // NEW: Get start and end location info
+    func getStartAndEndLocationInfo(from locations: [LocationData]) -> (hasStart: Bool, hasEnd: Bool, startAddress: String?, endAddress: String?) {
+        let tripLocations = locations.filter { locationIds.contains($0.id) }
+        
+        let startLocation = tripLocations.first { $0.comment?.contains("Trip start location") == true }
+        let endLocation = tripLocations.first { $0.comment?.contains("Trip end location") == true }
+        
+        return (
+            hasStart: startLocation != nil,
+            hasEnd: endLocation != nil,
+            startAddress: startLocation?.address,
+            endAddress: endLocation?.address
+        )
+    }
+    
     // MARK: - Trip Actions
     mutating func endTrip() {
         isActive = false

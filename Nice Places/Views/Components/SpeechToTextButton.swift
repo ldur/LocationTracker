@@ -694,7 +694,7 @@ enum SpeechRecognitionError: Error, LocalizedError {
 
 // MARK: - Preview
 #Preview {
-    @State var text = ""
+    @Previewable @State var text = ""
     
     return VStack(spacing: 20) {
         Text("Current text: \(text)")

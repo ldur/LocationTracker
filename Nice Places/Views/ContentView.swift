@@ -36,7 +36,171 @@ struct ContentView: View {
     init() {
         let dataManager = DataManager()
         self._dataManager = State(initialValue: dataManager)
-        self._tripManager = State(initialValue: TripManager(dataManager: dataManager))
+        let tripManager = TripManager(dataManager: dataManager)
+        self._tripManager = State(initialValue: tripManager)
+    }
+    
+    // NEW: Extract profile button to simplify complex expression
+    private var profileButton: some View {
+        Button(action: {
+            print("📞 ContentView: Opening ProfileView")
+            showingProfileView = true
+        }) {
+            HStack(spacing: 6) {
+                profileIcon
+                profileText
+            }
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
+            .background(
+                Capsule()
+                    .fill(backgroundColor)
+            )
+        }
+    }
+    
+    // NEW: Extract profile icon
+    private var profileIcon: some View {
+        Group {
+            if profileManager.isProfileSetup() {
+                let userName = profileManager.userProfile.name
+                let initial = String(userName.prefix(1)).uppercased()
+                
+                Circle()
+                    .fill(Color.spotifyGreen)
+                    .frame(width: 28, height: 28)
+                    .overlay(
+                        Text(initial)
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(.black)
+                    )
+            } else {
+                Image(systemName: "person.circle")
+                    .font(.title2)
+                    .foregroundColor(.spotifyTextGray)
+            }
+        }
+    }
+    
+    // NEW: Extract profile text
+    private var profileText: some View {
+        Group {
+            if !profileManager.isProfileSetup() {
+                Text("Profile")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.spotifyTextGray)
+            }
+        }
+    }
+    
+    // NEW: Extract padding values
+    private var horizontalPadding: CGFloat {
+        profileManager.isProfileSetup() ? 0 : 8
+    }
+    
+    private var verticalPadding: CGFloat {
+        profileManager.isProfileSetup() ? 0 : 4
+    }
+    
+    // NEW: Extract background color
+    private var backgroundColor: Color {
+        profileManager.isProfileSetup() ? Color.clear : Color.spotifyTextGray.opacity(0.2)
+    }
+    
+    // NEW: Extract header section
+    private var headerSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                titleSection
+                Spacer()
+                profileButton
+                tripsButton
+                statusIndicator
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 20)
+    }
+    
+    // NEW: Extract title section
+    private var titleSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Location")
+                .font(.title)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+            
+            Text("Tracker")
+                .font(.title)
+                .fontWeight(.bold)
+                .foregroundColor(.spotifyGreen)
+        }
+    }
+    
+    // NEW: Extract trips button
+    private var tripsButton: some View {
+        Button(action: { showingTripsView = true }) {
+            HStack(spacing: 6) {
+                Image(systemName: "map.circle")
+                    .font(.headline)
+                Text("Trips")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+            .foregroundColor(.spotifyGreen)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(Color.spotifyGreen.opacity(0.2))
+            )
+        }
+    }
+    
+    // NEW: Extract status indicator
+    private var statusIndicator: some View {
+        Circle()
+            .fill(locationManager.isUpdatingLocation ? Color.spotifyGreen : Color.spotifyTextGray)
+            .frame(width: 12, height: 12)
+            .scaleEffect(pulseAnimation ? 1.2 : 1.0)
+            .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: pulseAnimation)
+            .onAppear {
+                if locationManager.isUpdatingLocation {
+                    pulseAnimation = true
+                }
+            }
+    }
+    
+    // NEW: Extract active trip section
+    private var activeTripSection: some View {
+        Group {
+            if let activeTrip = tripManager.activeTrip {
+                VStack(spacing: 12) {
+                    ActiveTripBanner(
+                        trip: activeTrip,
+                        locationCount: activeTrip.locationIds.count,
+                        locations: dataManager.savedLocations,
+                        onTap: {
+                            // Could show trip detail here
+                        },
+                        onEnd: {
+                            tripManager.endActiveTrip()
+                        }
+                    )
+                    
+                    // Auto-Save Status Indicator
+                    if activeTrip.autoSaveConfig.isEnabled {
+                        AutoSaveStatusView(
+                            config: activeTrip.autoSaveConfig,
+                            isVisible: autoSaveIndicatorVisible,
+                            lastMessage: lastAutoSaveMessage
+                        )
+                    }
+                }
+            }
+        }
     }
 
     var body: some View {
@@ -56,252 +220,11 @@ struct ContentView: View {
                 
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 32) {
-                        // Header Section
-                        VStack(spacing: 12) {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Location")
-                                        .font(.title)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                    
-                                    Text("Tracker")
-                                        .font(.title)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.spotifyGreen)
-                                }
-                                
-                                Spacer()
-                                
-                                // Profile button
-                                Button(action: {
-                                    print("📞 ContentView: Opening ProfileView")
-                                    showingProfileView = true
-                                }) {
-                                    HStack(spacing: 6) {
-                                        if profileManager.isProfileSetup() {
-                                            // Show user initial if profile is set up
-                                            Circle()
-                                                .fill(Color.spotifyGreen)
-                                                .frame(width: 28, height: 28)
-                                                .overlay(
-                                                    Text(String(profileManager.userProfile.name.prefix(1)).uppercased())
-                                                        .font(.caption)
-                                                        .fontWeight(.bold)
-                                                        .foregroundColor(.black)
-                                                )
-                                        } else {
-                                            // Show generic profile icon
-                                            Image(systemName: "person.circle")
-                                                .font(.title2)
-                                                .foregroundColor(.spotifyTextGray)
-                                        }
-                                        
-                                        if !profileManager.isProfileSetup() {
-                                            Text("Profile")
-                                                .font(.subheadline)
-                                                .fontWeight(.medium)
-                                                .foregroundColor(.spotifyTextGray)
-                                        }
-                                    }
-                                    .padding(.horizontal, profileManager.isProfileSetup() ? 0 : 8)
-                                    .padding(.vertical, profileManager.isProfileSetup() ? 0 : 4)
-                                    .background(
-                                        Capsule()
-                                            .fill(profileManager.isProfileSetup() ? Color.clear : Color.spotifyTextGray.opacity(0.2))
-                                    )
-                                }
-                                
-                                // Trips button
-                                Button(action: { showingTripsView = true }) {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "map.circle")
-                                            .font(.headline)
-                                        Text("Trips")
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                    }
-                                    .foregroundColor(.spotifyGreen)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(
-                                        Capsule()
-                                            .fill(Color.spotifyGreen.opacity(0.2))
-                                    )
-                                }
-                                
-                                // Status indicator
-                                Circle()
-                                    .fill(locationManager.isUpdatingLocation ? Color.spotifyGreen : Color.spotifyTextGray)
-                                    .frame(width: 12, height: 12)
-                                    .scaleEffect(pulseAnimation ? 1.2 : 1.0)
-                                    .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: pulseAnimation)
-                                    .onAppear {
-                                        if locationManager.isUpdatingLocation {
-                                            pulseAnimation = true
-                                        }
-                                    }
-                            }
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.top, 20)
-                        
-                        // Active Trip Banner with Auto-Save Indicator
-                        if let activeTrip = tripManager.activeTrip {
-                            VStack(spacing: 12) {
-                                ActiveTripBanner(
-                                    trip: activeTrip,
-                                    locationCount: activeTrip.locationIds.count,
-                                    onTap: {
-                                        // Could show trip detail here
-                                    },
-                                    onEnd: {
-                                        tripManager.endActiveTrip()
-                                    }
-                                )
-                                
-                                // Auto-Save Status Indicator
-                                if activeTrip.autoSaveConfig.isEnabled {
-                                    AutoSaveStatusView(
-                                        config: activeTrip.autoSaveConfig,
-                                        isVisible: autoSaveIndicatorVisible,
-                                        lastMessage: lastAutoSaveMessage
-                                    )
-                                }
-                                // Debug info (remove in production)
-                                #if DEBUG
-                                if activeTrip.autoSaveConfig.isEnabled {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Debug Auto-Save Info:")
-                                            .font(.caption2)
-                                            .foregroundColor(.orange)
-                                        
-                                        Text(tripManager.getAutoSaveDebugInfo())
-                                            .font(.caption2)
-                                            .foregroundColor(.spotifyTextGray)
-                                            .monospaced()
-                                    }
-                                    .padding(8)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 6)
-                                            .fill(Color.orange.opacity(0.1))
-                                    )
-                                    .padding(.horizontal, 24)
-                                }
-                                #endif
-                            }
-                        }
-                        
-                        // Current Location Card with integrated actions
-                        SpotifyLocationCard(
-                            address: locationManager.currentAddress,
-                            coordinate: safeCLLocationCoordinate(locationManager.currentLocation?.coordinate),
-                            altitude: safeAltitude(locationManager.currentLocation?.altitude),
-                            isUpdating: locationManager.isUpdatingLocation,
-                            onViewMap: {
-                                showingMapView = true
-                            },
-                            onSharePosition: {
-                                shareCurrentPosition()
-                            },
-                            onCapturePhoto: {
-                                showingCamera = true
-                            }
-                        )
-                        
-                        // Action Buttons
-                        VStack(spacing: 16) {
-                            // Save Location Button
-                            Button(action: {
-                                showingSaveLocationSheet = true
-                            }) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.title2)
-                                    
-                                    Text("Save This Location")
-                                        .font(.headline)
-                                        .fontWeight(.semibold)
-                                }
-                                .foregroundColor(.black)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 56)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 28)
-                                        .fill(Color.spotifyGreen)
-                                )
-                                .scaleEffect(locationManager.currentLocation != nil ? 1.0 : 0.95)
-                                .opacity(locationManager.currentLocation != nil ? 1.0 : 0.6)
-                                .animation(.easeInOut(duration: 0.2), value: locationManager.currentLocation != nil)
-                            }
-                            .disabled(locationManager.currentLocation == nil)
-                            .padding(.horizontal, 24)
-                            
-                            // UPDATED: Emergency Button - now checks the toggle setting instead of just hasEmergencyContact
-                            if profileManager.shouldShowEmergencyButton() {
-                                Button(action: { showingEmergencySheet = true }) {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: "phone.circle.fill")
-                                            .font(.title2)
-                                        
-                                        Text("Emergency Contact")
-                                            .font(.headline)
-                                            .fontWeight(.semibold)
-                                    }
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 56)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 28)
-                                            .fill(Color.red)
-                                    )
-                                }
-                                .padding(.horizontal, 24)
-                            }
-                            
-                            // View Saved Locations Button
-                            Button(action: { showingSavedLocations = true }) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "list.bullet.rectangle.portrait")
-                                        .font(.title2)
-                                    
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Your Saved Locations")
-                                            .font(.headline)
-                                            .fontWeight(.medium)
-                                        
-                                        let totalPhotos = dataManager.savedLocations.reduce(0) { $0 + $1.photoIdentifiers.count }
-                                        let locationsText = "\(dataManager.savedLocations.count) locations"
-                                        let photosText = totalPhotos > 0 ? " • \(totalPhotos) photos" : ""
-                                        
-                                        Text(locationsText + photosText)
-                                            .font(.caption)
-                                            .foregroundColor(.spotifyTextGray)
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    if dataManager.savedLocations.contains(where: { !$0.photoIdentifiers.isEmpty }) {
-                                        Image(systemName: "photo.fill")
-                                            .font(.caption)
-                                            .foregroundColor(.spotifyGreen)
-                                    }
-                                    
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
-                                        .foregroundColor(.spotifyTextGray)
-                                }
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.spotifyMediumGray)
-                                )
-                            }
-                            .padding(.horizontal, 24)
-                        }
+                        headerSection
+                        activeTripSection
+                        locationCardSection
+                        actionButtonsSection
+                        savedLocationsSection
                         
                         Spacer(minLength: 50)
                     }
@@ -310,6 +233,16 @@ struct ContentView: View {
             .onAppear {
                 locationManager.requestLocation()
                 setupAutoSaveObserver()
+                
+                // NEW: Set location providers for TripManager
+                tripManager.setLocationProviders(
+                    locationProvider: { [weak locationManager] in
+                        return locationManager?.currentLocation
+                    },
+                    addressProvider: { [weak locationManager] in
+                        return locationManager?.currentAddress
+                    }
+                )
             }
             .onDisappear {
                 removeAutoSaveObserver()
@@ -442,6 +375,121 @@ struct ContentView: View {
                 )
             }
         }
+    }
+    
+    // NEW: Extract location card section
+    private var locationCardSection: some View {
+        SpotifyLocationCard(
+            address: locationManager.currentAddress,
+            coordinate: safeCLLocationCoordinate(locationManager.currentLocation?.coordinate),
+            altitude: safeAltitude(locationManager.currentLocation?.altitude),
+            isUpdating: locationManager.isUpdatingLocation,
+            onViewMap: {
+                showingMapView = true
+            },
+            onSharePosition: {
+                shareCurrentPosition()
+            },
+            onCapturePhoto: {
+                showingCamera = true
+            }
+        )
+    }
+    
+    // NEW: Extract action buttons section
+    private var actionButtonsSection: some View {
+        VStack(spacing: 16) {
+            saveLocationButton
+            emergencyButton
+        }
+    }
+    
+    // NEW: Extract save location button
+    private var saveLocationButton: some View {
+        Button(action: {
+            showingSaveLocationSheet = true
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title2)
+                
+                Text("Save This Location")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+            }
+            .foregroundColor(.black)
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(
+                RoundedRectangle(cornerRadius: 28)
+                    .fill(Color.spotifyGreen)
+            )
+            .scaleEffect(locationManager.currentLocation != nil ? 1.0 : 0.95)
+            .opacity(locationManager.currentLocation != nil ? 1.0 : 0.6)
+            .animation(.easeInOut(duration: 0.2), value: locationManager.currentLocation != nil)
+        }
+        .disabled(locationManager.currentLocation == nil)
+        .padding(.horizontal, 24)
+    }
+    
+    // NEW: Extract emergency button
+    private var emergencyButton: some View {
+        Group {
+            if profileManager.shouldShowEmergencyButton() {
+                Button(action: { showingEmergencySheet = true }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "phone.circle.fill")
+                            .font(.title2)
+                        
+                        Text("Emergency Contact")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(
+                        RoundedRectangle(cornerRadius: 28)
+                            .fill(Color.red)
+                    )
+                }
+                .padding(.horizontal, 24)
+            }
+        }
+    }
+    
+    // NEW: Extract saved locations section
+    private var savedLocationsSection: some View {
+        Button(action: { showingSavedLocations = true }) {
+            HStack(spacing: 12) {
+                Image(systemName: "list.bullet.rectangle.portrait")
+                    .font(.title2)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("View Saved Locations")
+                        .font(.headline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                    
+                    Text("\(dataManager.getLocationCount()) locations saved")
+                        .font(.caption)
+                        .foregroundColor(.spotifyTextGray)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.spotifyTextGray)
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.spotifyMediumGray.opacity(0.6))
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 24)
     }
     
     // MARK: - Enhanced Auto-Save Management with Street Tracking

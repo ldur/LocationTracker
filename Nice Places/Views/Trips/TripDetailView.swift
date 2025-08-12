@@ -7,6 +7,7 @@ struct TripDetailView: View {
     let trip: Trip
     @Bindable var tripManager: TripManager
     @Bindable var dataManager: DataManager
+    @Bindable var locationManager: LocationManager // NEW: Add LocationManager
     let onDismiss: () -> Void
     
     @State private var showingMapView = false
@@ -455,6 +456,17 @@ struct TripDetailView: View {
                             .foregroundColor(.white)
                     }
                 }
+            }
+            .onAppear {
+                // NEW: Set location providers for TripManager to enable end location creation
+                tripManager.setLocationProviders(
+                    locationProvider: { [weak locationManager] in
+                        return locationManager?.currentLocation
+                    },
+                    addressProvider: { [weak locationManager] in
+                        return locationManager?.currentAddress
+                    }
+                )
             }
         }
         .fullScreenCover(isPresented: $showingMapView) {
@@ -1068,6 +1080,7 @@ struct EditTripSheet: View {
     TripCard(
         trip: sampleTrip,
         statistics: sampleStats,
+        locations: sampleLocations,
         onTap: {}
     )
     .preferredColorScheme(.dark)

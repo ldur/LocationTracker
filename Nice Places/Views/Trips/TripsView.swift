@@ -99,6 +99,7 @@ struct TripsView: View {
                                     ActiveTripBanner(
                                         trip: activeTrip,
                                         locationCount: activeTrip.locationIds.count,
+                                        locations: dataManager.savedLocations, // NEW: Pass locations data
                                         onTap: {
                                             selectedTrip = activeTrip
                                         },
@@ -198,6 +199,7 @@ struct TripsView: View {
                                             TripCard(
                                                 trip: trip,
                                                 statistics: tripManager.getTripStatistics(trip, from: dataManager.savedLocations),
+                                                locations: dataManager.savedLocations, // NEW: Pass locations data
                                                 onTap: {
                                                     selectedTrip = trip
                                                 }
@@ -277,7 +279,19 @@ struct TripsView: View {
                 trip: trip,
                 tripManager: tripManager,
                 dataManager: dataManager,
+                locationManager: locationManager, // NEW: Pass LocationManager
                 onDismiss: { selectedTrip = nil }
+            )
+        }
+        .onAppear {
+            // NEW: Set location providers for TripManager to enable end location creation
+            tripManager.setLocationProviders(
+                locationProvider: { [weak locationManager] in
+                    return locationManager?.currentLocation
+                },
+                addressProvider: { [weak locationManager] in
+                    return locationManager?.currentAddress
+                }
             )
         }
     }
