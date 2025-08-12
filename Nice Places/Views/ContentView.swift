@@ -9,7 +9,7 @@ struct ContentView: View {
     @State private var locationManager = LocationManager()
     @State private var dataManager = DataManager()
     @State private var photoManager = PhotoManager()
-    @State private var tripManager = TripManager()
+    @State private var tripManager: TripManager // NEW: Will be initialized with DataManager
     @State private var profileManager = ProfileManager()
     @State private var showingSavedLocations = false
     @State private var showingSaveLocationSheet = false
@@ -32,6 +32,13 @@ struct ContentView: View {
     @State private var showingEmergencySheet = false
     @State private var showingMessageComposer = false
     
+    // NEW: Initialize TripManager with DataManager
+    init() {
+        let dataManager = DataManager()
+        self._dataManager = State(initialValue: dataManager)
+        self._tripManager = State(initialValue: TripManager(dataManager: dataManager))
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -372,18 +379,28 @@ struct ContentView: View {
                 Text(photoSavedMessage)
             }
             .sheet(isPresented: $showingTripsView) {
-                TripsView(tripManager: tripManager, dataManager: dataManager)
+                TripsView(
+                    tripManager: tripManager, 
+                    dataManager: dataManager,
+                    locationManager: locationManager // NEW: Pass LocationManager
+                )
             }
             // Enhanced StartTripSheet with auto-save configuration
             .sheet(isPresented: $showingStartTripSheet) {
-                StartTripSheet { name, description, color, autoSaveConfig in
-                    let _ = tripManager.startNewTrip(
-                        name: name,
-                        description: description,
-                        color: color,
-                        autoSaveConfig: autoSaveConfig
-                    )
-                }
+                StartTripSheet(
+                    onStartTrip: { name, description, color, autoSaveConfig, location, address in
+                        let _ = tripManager.startNewTrip(
+                            name: name,
+                            description: description,
+                            color: color,
+                            autoSaveConfig: autoSaveConfig,
+                            currentLocation: location, // NEW: Pass location
+                            currentAddress: address    // NEW: Pass address
+                        )
+                    },
+                    currentLocation: locationManager.currentLocation, // NEW: Pass current location
+                    currentAddress: locationManager.currentAddress    // NEW: Pass current address
+                )
             }
             .sheet(isPresented: $showingTripAssignment) {
                 if let location = locationForTripAssignment {

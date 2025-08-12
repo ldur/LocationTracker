@@ -6,6 +6,7 @@ import CoreLocation
 struct TripsView: View {
     @Bindable var tripManager: TripManager
     @Bindable var dataManager: DataManager
+    @Bindable var locationManager: LocationManager // NEW: Add LocationManager
     
     @Environment(\.dismiss) private var dismiss
     @State private var showingStartTripSheet = false
@@ -248,16 +249,22 @@ struct TripsView: View {
                 }
             }
         }
-        // FIXED: Updated StartTripSheet to include AutoSaveConfiguration parameter
+        // FIXED: Updated StartTripSheet to include AutoSaveConfiguration parameter and current location
         .sheet(isPresented: $showingStartTripSheet) {
-            StartTripSheet { name, description, color, autoSaveConfig in
-                let _ = tripManager.startNewTrip(
-                    name: name,
-                    description: description,
-                    color: color,
-                    autoSaveConfig: autoSaveConfig
-                )
-            }
+            StartTripSheet(
+                onStartTrip: { name, description, color, autoSaveConfig, location, address in
+                    let _ = tripManager.startNewTrip(
+                        name: name,
+                        description: description,
+                        color: color,
+                        autoSaveConfig: autoSaveConfig,
+                        currentLocation: location, // NEW: Pass location
+                        currentAddress: address    // NEW: Pass address
+                    )
+                },
+                currentLocation: locationManager.currentLocation, // NEW: Pass current location
+                currentAddress: locationManager.currentAddress    // NEW: Pass current address
+            )
         }
         .sheet(isPresented: $showingTripSuggestions) {
             TripSuggestionsView(
@@ -277,9 +284,11 @@ struct TripsView: View {
 }
 
 #Preview {
-    TripsView(
-        tripManager: TripManager(),
-        dataManager: DataManager()
+    let dataManager = DataManager()
+    return TripsView(
+        tripManager: TripManager(dataManager: dataManager),
+        dataManager: dataManager,
+        locationManager: LocationManager()
     )
     .preferredColorScheme(.dark)
 }

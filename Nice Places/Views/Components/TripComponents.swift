@@ -283,7 +283,9 @@ struct StatisticView: View {
 
 // MARK: - Enhanced Start Trip Sheet with Trip Type Storage
 struct StartTripSheet: View {
-    let onStartTrip: (String, String?, Trip.TripColor, AutoSaveConfiguration) -> Void
+    let onStartTrip: (String, String?, Trip.TripColor, AutoSaveConfiguration, CLLocation?, String?) -> Void
+    let currentLocation: CLLocation? // NEW: Add current location
+    let currentAddress: String? // NEW: Add current address
     
     @Environment(\.dismiss) private var dismiss
     @State private var tripName: String = ""
@@ -322,6 +324,27 @@ struct StartTripSheet: View {
                                 .foregroundColor(.spotifyTextGray)
                         }
                         .padding(.top, 20)
+                        
+                        // NEW: Show location status
+                        if currentLocation == nil {
+                            HStack {
+                                Image(systemName: "location.slash")
+                                    .foregroundColor(.orange)
+                                Text("Location not available - trip will start without initial location")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                            }
+                            .padding(.horizontal, 24)
+                        } else {
+                            HStack {
+                                Image(systemName: "location.fill")
+                                    .foregroundColor(.spotifyGreen)
+                                Text("Current location will be added as trip start point")
+                                    .font(.caption)
+                                    .foregroundColor(.spotifyGreen)
+                            }
+                            .padding(.horizontal, 24)
+                        }
                         
                         VStack(spacing: 20) {
                             // Trip Name
@@ -487,7 +510,9 @@ struct StartTripSheet: View {
                             tripName,
                             finalDescription.isEmpty ? nil : finalDescription,
                             selectedColor,
-                            autoSaveConfig
+                            autoSaveConfig,
+                            currentLocation,
+                            currentAddress
                         )
                         dismiss()
                     }

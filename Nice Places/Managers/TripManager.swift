@@ -8,6 +8,7 @@ import CoreLocation
 class TripManager {
     private let userDefaults = UserDefaults.standard
     private let savedTripsKey = "SavedTrips"
+    private let dataManager: DataManager // NEW: Add reference to DataManager
     
     var savedTrips: [Trip] = []
     var activeTrip: Trip? {
@@ -20,7 +21,9 @@ class TripManager {
     private var lastAutoSaveTime: Date?
     private var isFirstLocationOfTrip: Bool = true // Track if this is the first location
     
-    init() {
+    // NEW: Initialize with DataManager
+    init(dataManager: DataManager) {
+        self.dataManager = dataManager
         loadSavedTrips()
         setupAutoSaveMonitoring()
     }
@@ -30,7 +33,8 @@ class TripManager {
     }
     
     // MARK: - Trip Management
-    func startNewTrip(name: String, description: String? = nil, color: Trip.TripColor = .green, autoSaveConfig: AutoSaveConfiguration = AutoSaveConfiguration()) -> Trip {
+    // UPDATED: Modified to accept current location and create initial location
+    func startNewTrip(name: String, description: String? = nil, color: Trip.TripColor = .green, autoSaveConfig: AutoSaveConfiguration = AutoSaveConfiguration(), currentLocation: CLLocation? = nil, currentAddress: String? = nil) -> Trip {
         // End any existing active trip
         endActiveTrip()
         
@@ -38,11 +42,34 @@ class TripManager {
         savedTrips.append(newTrip)
         saveToPersistence()
         
+        // NEW: Auto-create initial location if current location is available
+        if let location = currentLocation, let address = currentAddress {
+            createInitialLocationForTrip(newTrip, location: location, address: address)
+        }
+        
         // NEW: Setup auto-save for the new trip and reset state
         resetAutoSaveStateForNewTrip()
         setupAutoSaveForActiveTrip()
         
         return newTrip
+    }
+    
+    // NEW: Helper method to create initial location for trip
+    private func createInitialLocationForTrip(_ trip: Trip, location: CLLocation, address: String) {
+        let initialLocation = LocationData(
+            address: address,
+            coordinate: location.coordinate,
+            altitude: location.altitude,
+            comment: "Trip start location"
+        )
+        
+        // Save to DataManager
+        dataManager.saveLocation(initialLocation)
+        
+        // Add to trip
+        addLocationToActiveTrip(initialLocation.id)
+        
+        print("🚗 TripManager: Created initial location for trip: \(trip.name)")
     }
     
     func endActiveTrip() {

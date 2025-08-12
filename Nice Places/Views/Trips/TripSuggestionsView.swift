@@ -570,9 +570,10 @@ struct CreateTripFromLocationsSheet: View {
 }
 
 #Preview {
-    TripSuggestionsView(
-        tripManager: TripManager(),
-        dataManager: DataManager()
+    let dataManager = DataManager()
+    return TripSuggestionsView(
+        tripManager: TripManager(dataManager: dataManager),
+        dataManager: dataManager
     )
     .preferredColorScheme(.dark)
 }
